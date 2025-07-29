@@ -32,12 +32,6 @@ class Business(MunicipalityAwareModel):
     ('published', 'Published'),
     ('archived', 'Archived'),
 ]
-    LIST_OF_SERVICES=[
-        ('FreeWifi','freewifi'),
-        ('TrekkingPackage','trekkingPackage'),
-        ('RoomService','roomservice'),
-        ('LocalGuide','localguide'),
-    ]
     service_coverage = models.CharField(
         max_length=100,
         choices=[
