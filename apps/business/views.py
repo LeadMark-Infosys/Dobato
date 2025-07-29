@@ -3,7 +3,6 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 
 from apps.core.views import MunicipalityTenantModelViewSet
-
 from .models import Business, Review, Favorite
 from .serializers import BusinessSerializer, ReviewSerializer, FavoriteSerializer
 
