@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-
 from apps.municipality.models import MunicipalityAwareModel
 from apps.core.models import BaseModel
 
@@ -47,7 +46,6 @@ class Business(MunicipalityAwareModel):
         choices=[('Fixed', 'Fixed'), ('Range', 'Range')],
         default='Fixed'
     )
-
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='published')
     slug=models.CharField(max_length=50,blank=True,unique=True)
     name = models.CharField(max_length=255)
