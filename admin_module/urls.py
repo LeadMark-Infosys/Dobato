@@ -48,6 +48,7 @@ urlpatterns = [
     path('api/tourism/', include('apps.tourism.urls')), 
     path('api/municipality/', include('apps.municipality.urls')),
     path('api/business/',include('apps.business.urls')),
+    path('api/event/', include('apps.event.urls')),
 ]
 
 if settings.DEBUG:
