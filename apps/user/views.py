@@ -1,6 +1,3 @@
-import random
-import requests
-import os
 import logging
 
 from datetime import timedelta
@@ -9,7 +6,7 @@ from django.utils import timezone
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
-from django.db.models import Count, Q
+from django.db.models import  Q
 
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView
@@ -88,7 +85,8 @@ class VerifyOTPView(APIView):
 
         user = otp_entry.user
         user.is_active = True
-        user.save()
+        user.last_login = timezone.now() 
+        user.save(update_fields=["is_active", "last_login"])
         logger.info(f"User activated: {user_id}")
 
         return Response({"detail": "OTP verified successfully."}, status=status.HTTP_200_OK)

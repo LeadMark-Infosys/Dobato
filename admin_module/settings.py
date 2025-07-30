@@ -81,6 +81,7 @@ INSTALLED_APPS = DJANGO_APPS + EXTERNAL_APPS + LOCAL_APPS
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'apps.municipality.middleware.TenantContextMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -88,7 +89,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'axes.middleware.AxesMiddleware',
     'apps.core.middleware.APILoggingMiddleware',
-    'apps.municipality.middleware.TenantContextMiddleware'
+    
 ]
 REST_FRAMEWORK = {
     
