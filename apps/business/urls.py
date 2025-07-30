@@ -7,6 +7,7 @@ router.register(r'', BusinessViewSet)
 router.register(r'reviews', ReviewViewSet)
 router.register(r'favorites', FavoriteViewSet)  
 
+
 urlpatterns = [
     path('', include(router.urls)),
 ]

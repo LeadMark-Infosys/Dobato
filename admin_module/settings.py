@@ -74,6 +74,7 @@ LOCAL_APPS = [
     'apps.tourism',
     'apps.municipality',
     'apps.business',
+    'apps.event',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + EXTERNAL_APPS + LOCAL_APPS
