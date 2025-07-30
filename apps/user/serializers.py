@@ -1,7 +1,8 @@
 import re
 import logging
 from rest_framework import serializers
-from apps.user.models import User
+from apps.user.models import User, AdminUser
+from django.contrib.auth.hashers import make_password
 
 logger = logging.getLogger('api_log')
 
@@ -18,6 +19,31 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = "__all__"
 
+class AdminUserRegistrationSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, validators=[password_validator])
+
+    class Meta:
+        model = AdminUser
+        fields = ['id', 'name', 'email', 'phone', 'password', 'is_staff', 'is_superuser']
+
+    def create(self, validated_data):
+        password = validated_data.pop('password')
+        is_superuser = validated_data.get('is_superuser', False)
+        is_staff = validated_data.get('is_staff', False)
+
+        if is_superuser and is_staff:
+            user_type = 'super_admin'
+        elif is_staff and not is_superuser:
+            user_type = 'support_user'
+        else:
+            raise serializers.ValidationError("Invalid combination for TenantUser")
+
+        tenant_user = AdminUser(**validated_data, user_type=user_type)
+        tenant_user.password = make_password(password)
+        tenant_user.save()
+        return tenant_user
+
+
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[password_validator])
 
@@ -28,7 +54,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         logger.info(f"Registering new User with data: {validated_data}")
         password = validated_data.pop('password')
-        user_type = validated_data.pop('user_type', 'traveler')
+        user_type = validated_data.pop('user_type', 'public')
 
         user = User(**validated_data)
         user.user_type = user_type
