@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     EventCategory, EventLocation, Event, EventSchedule,
-    OrganizerInfo, EventMedia, MultiLingualEvent
+    OrganizerInfo, EventMedia
 )
 @admin.register(EventCategory)
 class EventCategoryAdmin(admin.ModelAdmin):
@@ -26,6 +26,3 @@ class OrganizerInfoAdmin(admin.ModelAdmin):
 @admin.register(EventMedia)
 class EventMediaAdmin(admin.ModelAdmin):
     list_display = ('event', 'media_url')
-@admin.register(MultiLingualEvent)
-class MultiLingualEventAdmin(admin.ModelAdmin):
-    list_display = ('event', 'language_code', 'title')

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     EventCategory, EventLocation, Event, EventSchedule,
-    OrganizerInfo, EventMedia, MultiLingualEvent
+    OrganizerInfo, EventMedia
 )
 
 class EventCategorySerializer(serializers.ModelSerializer):
@@ -33,8 +33,3 @@ class EventMediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = EventMedia
         fields = '__all__'
-
-class MultiLingualEventSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = MultiLingualEvent
-        fields ='__all__'

@@ -1,5 +1,7 @@
 from django.db import models
+from apps.municipality.models import MunicipalityAwareModel
 from apps.core.models import BaseModel
+from django.contrib.auth import get_user_model
 
 class EventCategory(BaseModel):
     name = models.CharField(max_length=100)
@@ -11,8 +13,9 @@ class EventLocation(BaseModel):
     state = models.CharField(max_length=100)
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
+    user=models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
 
-class Event(BaseModel):
+class Event(MunicipalityAwareModel):
     title = models.CharField(max_length=255)
     description = models.TextField()
     date = models.DateTimeField()
@@ -38,6 +41,7 @@ class Event(BaseModel):
     booking_rsvp_link = models.URLField(blank=True, null=True)
     slug = models.SlugField(max_length=255, unique=True, blank=True, null=True)
     tags = models.JSONField(blank=True, null=True)
+    user=models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
     def __str__(self):
         return self.title
     
@@ -54,6 +58,7 @@ class OrganizerInfo(BaseModel):
     name = models.CharField(max_length=255)
     address = models.TextField(blank=True, null=True)
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='organizer_info')
+    user=models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
     def __str__(self):
         return self.name   
     
@@ -62,11 +67,4 @@ class EventMedia(BaseModel):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='media')
     def __str__(self):
         return f"Media for {self.event.title}"  
-    
-class MultiLingualEvent(BaseModel):
-    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='translations')
-    language_code = models.CharField(max_length=10)
-    title = models.CharField(max_length=255)
-    description = models.TextField()
-    def __str__(self):
-        return f"{self.event.title} ({self.language_code})"
+  
