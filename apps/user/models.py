@@ -6,8 +6,9 @@ from .manager import CustomUserManager
 from apps.core.models import BaseModel
 from apps.municipality.models import Municipality
 
-#if super_user and is staff true then super admin else if super user is false and is staff true then support user
-class AdminUser(BaseModel):
+
+
+class AdminUser(AbstractBaseUser):
     USER_TYPE_CHOICES = [
         ('super_admin', 'Super Admin'),
         ('support_user', 'support_user'),

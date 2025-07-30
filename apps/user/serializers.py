@@ -43,24 +43,31 @@ class AdminUserRegistrationSerializer(serializers.ModelSerializer):
         tenant_user.save()
         return tenant_user
 
-
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[password_validator])
 
     class Meta:
         model = User
-        fields = ['id', 'name', 'email', 'phone', 'password', 'user_type', 'is_staff', 'is_active', 'is_superuser']
+        fields = ['id', 'name', 'email', 'phone', 'password', 'user_type', 'is_staff', 'is_active', 'is_superuser', 'municipality']
 
     def create(self, validated_data):
         logger.info(f"Registering new User with data: {validated_data}")
         password = validated_data.pop('password')
-        user_type = validated_data.pop('user_type', 'public')
+        user_type = validated_data.get('user_type', 'public')
+        municipality = validated_data.get('municipality', None)
+
+        if user_type == 'municipality_admin':
+            if not municipality:
+                raise serializers.ValidationError("Municipality must be provided for a municipality admin.")
+            if User.objects.filter(user_type='municipality_admin', municipality=municipality).exists():
+                raise serializers.ValidationError("A municipality admin already exists for this municipality.")
 
         user = User(**validated_data)
         user.user_type = user_type
         user.set_password(password)
         user.save()
         return user
+
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True, required=True)
