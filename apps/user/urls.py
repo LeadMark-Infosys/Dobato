@@ -8,12 +8,14 @@ from .views import (
     UserViewSet,
     ResetPasswordAPIView,
     ResetPasswordConfirmAPIView,
+    AdminUserRegistrationView,
 )
 
 app_name = 'user'
 
 router = DefaultRouter()
 router.register('register', UserRegistrationView, basename='user-register')
+router.register('admin-register', AdminUserRegistrationView, basename='tenant-user-register')
 router.register('account', UserViewSet, basename='user')
 router.register('change-password', UserViewSet, basename='change-password')
 

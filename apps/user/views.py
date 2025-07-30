@@ -1,6 +1,3 @@
-import random
-import requests
-import os
 import logging
 
 from datetime import timedelta
@@ -9,25 +6,34 @@ from django.utils import timezone
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
-from django.db.models import Count, Q
+from django.db.models import  Q
 
 from rest_framework.viewsets import ModelViewSet
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from apps.core.permissions import IsSuperAdmin, IsSupportUser
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
 from rest_framework.throttling import UserRateThrottle
 
 from apps.core.views import generate_otp, send_otp_sms
-from apps.user.models import User, UserOTP
+from apps.user.models import User, UserOTP, AdminUser
 from apps.user.serializers import (
     UserRegistrationSerializer, OTPVerifySerializer, 
-    ChangePasswordSerializer, UserSerializer
+    ChangePasswordSerializer, UserSerializer, AdminUserRegistrationSerializer
 )
 from apps.user.tasks import send_email_task
 
 logger = logging.getLogger('django')
+
+class AdminUserRegistrationView(ModelViewSet):
+    queryset = AdminUser.objects.all()
+    serializer_class = AdminUserRegistrationSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self): 
+        return AdminUser.objects.none()
 
 class UserRegistrationView(ModelViewSet):
     queryset = User.objects.all()
@@ -88,7 +94,8 @@ class VerifyOTPView(APIView):
 
         user = otp_entry.user
         user.is_active = True
-        user.save()
+        user.last_login = timezone.now() 
+        user.save(update_fields=["is_active", "last_login"])
         logger.info(f"User activated: {user_id}")
 
         return Response({"detail": "OTP verified successfully."}, status=status.HTTP_200_OK)
