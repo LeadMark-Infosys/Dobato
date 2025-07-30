@@ -4,6 +4,7 @@ from .models import (
     EventCategory, EventLocation, Event, EventSchedule,
     OrganizerInfo, EventMedia
 )
+from apps.core.views import MunicipalityTenantModelViewSet
 from .serializers import (
     EventCategorySerializer, EventLocationSerializer, EventSerializer,
     EventScheduleSerializer, OrganizerInfoSerializer, EventMediaSerializer
@@ -19,7 +20,7 @@ class EventLocationViewSet(viewsets.ModelViewSet):
     serializer_class = EventLocationSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
-class EventViewSet(viewsets.ModelViewSet):
+class EventViewSet(MunicipalityTenantModelViewSet):
     queryset = Event.objects.all()
     serializer_class = EventSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
