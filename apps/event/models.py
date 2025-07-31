@@ -57,6 +57,9 @@ class EventSchedule(BaseModel):
 class OrganizerInfo(BaseModel):
     name = models.CharField(max_length=255)
     address = models.TextField(blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    website = models.URLField(blank=True, null=True)
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='organizer_info')
     user=models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
     def __str__(self):
@@ -65,6 +68,16 @@ class OrganizerInfo(BaseModel):
 class EventMedia(BaseModel):
     media_url = models.TextField()
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='media')
+    promo_video_url = models.JSONField(blank=True, null=True)
+    Brochure_url = models.JSONField(blank=True, null=True)
     def __str__(self):
         return f"Media for {self.event.title}"  
-  
+    
+class EventPublicInteraction(BaseModel):
+    rating = models.PositiveIntegerField(default=0)
+    comment = models.TextField(blank=True, null=True)
+    likes = models.PositiveIntegerField(default=0)
+    bookmark = models.BooleanField(default=False)
+    share = models.BooleanField(default=False)
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='public_interactions')
+    user = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
