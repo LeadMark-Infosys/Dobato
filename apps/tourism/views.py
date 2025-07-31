@@ -1,7 +1,7 @@
 from rest_framework.viewsets import ModelViewSet
 
 from apps.core.views import MunicipalityTenantModelViewSet
-from .permissions import IsDataEntryOrDataManagerAndApproved
+from apps.core.permissions import IsDataEntryOrDataManagerAndApproved
 from .models import *
 from .serializers import *
 

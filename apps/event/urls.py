@@ -2,7 +2,7 @@ from rest_framework import routers
 from .views import (
     EventCategoryViewSet, EventLocationViewSet, EventViewSet,
     EventScheduleViewSet, OrganizerInfoViewSet, EventMediaViewSet,
-    EventPublicInteractionViewSet
+    EventPublicInteractionViewSet, BookmarkViewSet
 )
 from django.urls import path, include
 
@@ -14,6 +14,8 @@ router.register(r'schedules', EventScheduleViewSet)
 router.register(r'organizers', OrganizerInfoViewSet)
 router.register(r'media', EventMediaViewSet)
 router.register(r'interactions', EventPublicInteractionViewSet)
+router.register(r'bookmarks', BookmarkViewSet)
+
 
 urlpatterns = [
     path('', include(router.urls)),

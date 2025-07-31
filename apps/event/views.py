@@ -1,14 +1,14 @@
 from rest_framework import viewsets
-from .permissions import IsDataEntryOrDataManagerAndApproved
+from apps.core.permissions import IsDataEntryOrDataManagerAndApproved
 from .models import (
     EventCategory, EventLocation, Event, EventSchedule,
-    OrganizerInfo, EventMedia, EventPublicInteraction
+    OrganizerInfo, EventMedia, EventPublicInteraction,Bookmark
 )
 from apps.core.views import MunicipalityTenantModelViewSet
 from .serializers import (
     EventCategorySerializer, EventLocationSerializer, EventSerializer,
     EventScheduleSerializer, OrganizerInfoSerializer, EventMediaSerializer,
-    EventPublicInteractionSerializer
+    EventPublicInteractionSerializer, BookmarkSerializer
 )
 
 class EventCategoryViewSet(viewsets.ModelViewSet):
@@ -44,4 +44,9 @@ class EventMediaViewSet(viewsets.ModelViewSet):
 class EventPublicInteractionViewSet(viewsets.ModelViewSet):
     queryset = EventPublicInteraction.objects.all()
     serializer_class = EventPublicInteractionSerializer
+    permission_classes = [IsDataEntryOrDataManagerAndApproved]
+
+class BookmarkViewSet(viewsets.ModelViewSet):
+    queryset = Bookmark.objects.all()
+    serializer_class = BookmarkSerializer
     permission_classes = [IsDataEntryOrDataManagerAndApproved]

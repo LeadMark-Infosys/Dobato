@@ -1,7 +1,7 @@
 from rest_framework.decorators import action
 from rest_framework import viewsets,permissions, status
 from rest_framework.response import Response
-from .permissions import IsDataEntryOrDataManagerAndApproved
+from apps.core.permissions import IsDataEntryOrDataManagerAndApproved
 from apps.core.views import MunicipalityTenantModelViewSet
 from .models import Business, Review, Favorite
 from .serializers import BusinessSerializer, ReviewSerializer, FavoriteSerializer

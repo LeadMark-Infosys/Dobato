@@ -76,8 +76,9 @@ class EventMedia(BaseModel):
 class EventPublicInteraction(BaseModel):
     rating = models.PositiveIntegerField(default=0)
     comment = models.TextField(blank=True, null=True)
-    likes = models.PositiveIntegerField(default=0)
-    bookmark = models.BooleanField(default=False)
-    share = models.BooleanField(default=False)
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='public_interactions')
     user = models.ForeignKey(get_user_model(), on_delete=models.SET_NULL, null=True, blank=True)
+
+class Bookmark(BaseModel):
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='bookmarks')
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='bookmarks')

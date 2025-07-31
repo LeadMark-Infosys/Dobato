@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     EventCategory, EventLocation, Event, EventSchedule,
-    OrganizerInfo, EventMedia, EventPublicInteraction
+    OrganizerInfo, EventMedia, EventPublicInteraction,Bookmark
 )
 
 class EventCategorySerializer(serializers.ModelSerializer):
@@ -37,4 +37,9 @@ class EventMediaSerializer(serializers.ModelSerializer):
 class EventPublicInteractionSerializer(serializers.ModelSerializer):
     class Meta:
         model = EventPublicInteraction
+        fields = '__all__'
+
+class BookmarkSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Bookmark
         fields = '__all__'
