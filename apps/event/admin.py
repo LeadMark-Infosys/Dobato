@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
-    EventCategory, EventLocation, Event, EventSchedule,
-    OrganizerInfo, EventMedia
+    EventCategory, EventLocation, Event, EventPublicInteraction, EventSchedule,
+    OrganizerInfo, EventMedia,Bookmark
 )
 @admin.register(EventCategory)
 class EventCategoryAdmin(admin.ModelAdmin):
@@ -26,3 +26,11 @@ class OrganizerInfoAdmin(admin.ModelAdmin):
 @admin.register(EventMedia)
 class EventMediaAdmin(admin.ModelAdmin):
     list_display = ('event', 'media_url')
+
+@admin.register(EventPublicInteraction)
+class EventPublicInteractionAdmin(admin.ModelAdmin):
+    list_display = ('event', 'user', 'rating', 'comment')
+
+@admin.register(Bookmark)
+class BookmarkAdmin(admin.ModelAdmin):
+    list_display = ('user', 'event')

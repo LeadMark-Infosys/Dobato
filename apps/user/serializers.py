@@ -3,7 +3,6 @@ import logging
 from rest_framework import serializers
 from apps.user.models import User, AdminUser
 from django.contrib.auth.hashers import make_password
-
 logger = logging.getLogger('api_log')
 
 def password_validator(value):

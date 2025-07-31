@@ -1,7 +1,7 @@
-from rest_framework import viewsets, permissions, status
-from rest_framework.response import Response
 from rest_framework.decorators import action
-
+from rest_framework import viewsets,permissions, status
+from rest_framework.response import Response
+from apps.core.permissions import IsDataEntryOrDataManagerAndApproved
 from apps.core.views import MunicipalityTenantModelViewSet
 from .models import Business, Review, Favorite
 from .serializers import BusinessSerializer, ReviewSerializer, FavoriteSerializer
@@ -9,12 +9,12 @@ from .serializers import BusinessSerializer, ReviewSerializer, FavoriteSerialize
 class BusinessViewSet(MunicipalityTenantModelViewSet):
     queryset = Business.objects.all()
     serializer_class = BusinessSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsDataEntryOrDataManagerAndApproved]
 
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [IsDataEntryOrDataManagerAndApproved]
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
     def approve(self, request, pk=None):
@@ -26,7 +26,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 class FavoriteViewSet(viewsets.ModelViewSet):
     queryset = Favorite.objects.all()  
     serializer_class = FavoriteSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsDataEntryOrDataManagerAndApproved]
 
     def get_queryset(self):
         return Favorite.objects.filter(user=self.request.user)

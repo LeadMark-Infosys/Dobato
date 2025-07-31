@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-
 from apps.municipality.models import MunicipalityAwareModel
 from apps.core.models import BaseModel
 
@@ -77,6 +76,7 @@ class Business(MunicipalityAwareModel):
     close_time = models.TimeField(null=True, blank=True)
     open_days = models.CharField(max_length=100, blank=True, help_text="e.g., Mon-Fri, Everyday, Sat-Sun")
     cover_image = models.TextField()
+    is_approved = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
