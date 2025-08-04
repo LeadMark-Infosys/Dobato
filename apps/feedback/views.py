@@ -7,12 +7,9 @@ class FeedbackViewSet(ModelViewSet):
     queryset = Feedback.objects.all()
     serializer_class = FeedbackSerializer
     permission_classes = [IsAuthenticated]
-
     def perform_create(self, serializer):
-        
         serializer.save(submitted_by=self.request.user)
-
-
+        
 class FeedbackViewSet(ModelViewSet):
     queryset = Feedback.objects.all()
     serializer_class = FeedbackSerializer
