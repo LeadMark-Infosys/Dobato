@@ -37,6 +37,7 @@ class TouristPlace(MunicipalityAwareModel):
     version = models.PositiveIntegerField(default=1)
     last_edited = models.DateTimeField(auto_now=True)
     is_approved = models.BooleanField(default=False)
+    
     def __str__(self):
         return self.name
 
