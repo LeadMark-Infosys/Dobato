@@ -25,3 +25,13 @@ class PageViewSet(MunicipalityTenantModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         return queryset.filter(is_deleted=False)
+
+    def perform_create(self, serializer):
+        serializer.save(
+            municipality=self.request.tenant,
+            created_by=self.request.user,
+            updated_by=self.request.user,
+        )
+
+    def perform_update(self, serializer):
+        serializer.save(updated_by=self.request.user)
