@@ -1,5 +1,7 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.response import Response
+from rest_framework import status
 
 from apps.core.views import MunicipalityTenantModelViewSet
 from apps.core.permissions import IsDataEntryOrDataManagerAndApproved
@@ -35,3 +37,10 @@ class PageViewSet(MunicipalityTenantModelViewSet):
 
     def perform_update(self, serializer):
         serializer.save(updated_by=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        page = self.get_object()
+        page.is_deleted = True
+        page.updated_by = request.user
+        page.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)

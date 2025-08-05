@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+
 import os
 
 
@@ -302,6 +303,3 @@ EMAIL_HOST_USER = "anjana@leadmarkinfosys.com"
 EMAIL_HOST_PASSWORD = "lxpcamdopypmfksr "
 EMAIL_USE_TLS = True
 DEFAULT_FROM_EMAIL = "anjana@leadmarkinfosys.com"
-
-
-
