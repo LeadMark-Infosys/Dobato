@@ -118,3 +118,19 @@ class PageSerializer(serializers.ModelSerializer):
                 PageMedia.objects.create(page=instance, **media)
 
         return instance
+
+
+class PageListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Page
+        fields = [
+            "id",
+            "title",
+            "slug",
+            "language_code",
+            "status",
+            "is_featured",
+            "published_at",
+            "created_at",
+            "updated_at",
+        ]
