@@ -32,18 +32,11 @@ def send_otp_sms(phone, otp):
         logger.error(f"Failed to send SMS to {phone}: {e}")
 
 class MunicipalityTenantModelViewSet(viewsets.ModelViewSet):
-    """
-    Base viewset for tenant-aware models.
-    Automatically:
-    - Filters queryset by `request.tenant` (municipality)
-    - Assigns `municipality` on object creation
-    """
-
     def get_queryset(self):
         # Assumes model has a ForeignKey to Municipality named 'municipality'
         base_queryset = super().get_queryset()
         return base_queryset.filter(municipality=self.request.tenant)
 
-    def perform_create(self, serializer):
+    def perform_create(self, serializer, **kwargs):
         # Automatically attach municipality from the request
-        serializer.save(municipality=self.request.tenant)
+        serializer.save(municipality=self.request.tenant, **kwargs)

@@ -82,3 +82,4 @@ class EventPublicInteraction(BaseModel):
 class Bookmark(BaseModel):
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='bookmarks')
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='bookmarks')
+    
