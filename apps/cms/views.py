@@ -1,18 +1,21 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.response import Response
-from rest_framework import status, permissions
+from rest_framework import status, permissions, viewsets
 from rest_framework.decorators import action
 from django.utils import timezone
 
-from .models import PageMeta, PageVersion, PageSection, PageMedia
+from .models import PageMeta, PageVersion, PageSection, PageMedia, Page
 from .serializers import (
     PageVersionSerializer,
+    PageMetaSerializer,
+    PageSectionSerializer,
+    PageMediaSerializer,
+    PageSerializer,
+    PageListSerializer,
 )
 from apps.core.views import MunicipalityTenantModelViewSet
 from apps.core.permissions import IsDataEntryOrDataManagerAndApproved
-from .models import Page
-from .serializers import PageSerializer, PageListSerializer
 
 
 class PageViewSet(MunicipalityTenantModelViewSet):
@@ -154,3 +157,48 @@ class PageViewSet(MunicipalityTenantModelViewSet):
             return Response(
                 {"error": "Version not found"}, status=status.HTTP_404_NOT_FOUND
             )
+
+
+class PageMetaViewSet(viewsets.ModelViewSet):
+    queryset = PageMeta.objects.all()
+    serializer_class = PageMetaSerializer
+    permission_classes = [IsDataEntryOrDataManagerAndApproved]
+
+    def get_queryset(self):
+        return PageMeta.objects.filter(page__municipality=self.request.tenant)
+
+
+class PageVersionViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = PageVersion.objects.all()
+    serializer_class = PageVersionSerializer
+    permission_classes = [IsDataEntryOrDataManagerAndApproved]
+
+    def get_queryset(self):
+        return PageVersion.objects.filter(page__municipality=self.request.tenant)
+
+
+class PageSectionViewSet(viewsets.ModelViewSet):
+    queryset = PageSection.objects.all()
+    serializer_class = PageSectionSerializer
+    permission_classes = [IsDataEntryOrDataManagerAndApproved]
+    ordering = ["position"]
+
+    def get_queryset(self):
+        return PageSection.objects.filter(page__municipality=self.request.tenant)
+
+
+class PageMediaViewSet(viewsets.ModelViewSet):
+    queryset = PageMedia.objects.all()
+    serializer_class = PageMediaSerializer
+    permission_classes = [IsDataEntryOrDataManagerAndApproved]
+
+    def get_queryset(self):
+        return PageMedia.objects.filter(page__municipality=self.request.tenant)
+
+    @action(detail=True, methods=["post"], permission_classes=[permissions.IsAdminUser])
+    def set_featured(self, request, pk=None):
+        media = self.get_object()
+        PageMedia.objects.filter(page=media.page).update(is_featured=False)
+        media.is_featured = True
+        media.save()
+        return Response({"detail": "Media set as featured."}, status=status.HTTP_200_OK)
