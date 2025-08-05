@@ -1,24 +1,19 @@
 from rest_framework import serializers
-from .models import Feedback, FeedbackCategory, QRLocation, FeedbackStatus
+from .models import (
+    FeedbackCategory,
+    FeedbackStatus,
+    Feedback,
+    FeedbackResponse,
+    Attachment,
+    QR
+)
+from django.contrib.auth import get_user_model
 
-class FeedbackSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Feedback
-        fields = '__all__'
-
-    def validate_approved_by(self, value):
-        if value and value.user_type != 'municipality_admin':
-            raise serializers.ValidationError("Only municipality_admin can approve feedback.")
-        return value
+User = get_user_model()
 
 class FeedbackCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = FeedbackCategory
-        fields = '__all__'
-
-class QRLocationSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = QRLocation
         fields = '__all__'
 
 class FeedbackStatusSerializer(serializers.ModelSerializer):
@@ -27,17 +22,24 @@ class FeedbackStatusSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class FeedbackResponseSerializer(serializers.ModelSerializer):
+    responder = serializers.StringRelatedField()
+
+    class Meta:
+        model = FeedbackResponse
+        exclude = ['feedback']
+
+class AttachmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Attachment
+        fields = ['id', 'file', 'uploaded_at']
+
+class FeedbackSerializer(serializers.ModelSerializer):
+    
     class Meta:
         model = Feedback
         fields = '__all__'
 
-    def validate_responder(self, value):
-        if value and value.user_type != 'municipality_admin':
-            raise serializers.ValidationError("Only municipality_admin can respond to feedback.")
-        return value
-
-class AttachmentSerializer(serializers.ModelSerializer):
+class QRSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Feedback
-        fields = ['qr_code_image']  
-        read_only_fields = ['qr_code_image']
+        model = QR
+        fields = '__all__'
