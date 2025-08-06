@@ -76,6 +76,7 @@ LOCAL_APPS = [
     'apps.business',
     'apps.event',
     'apps.feedback',
+    'apps.qr',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + EXTERNAL_APPS + LOCAL_APPS
