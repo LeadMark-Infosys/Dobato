@@ -2,8 +2,9 @@ from django.db import models
 from django.conf import settings
 from apps.municipality.models import Municipality
 import uuid
+from apps.core.models import BaseModel
 
-class QR(models.Model):
+class QR(BaseModel):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, primary_key=True)
     municipality = models.ForeignKey(
         Municipality,
@@ -34,9 +35,6 @@ class QR(models.Model):
         blank=True,
         related_name='created_qrs'  
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
     def __str__(self):
         return f"{self.name} ({self.municipality.name})"
 
@@ -46,8 +44,7 @@ class QR(models.Model):
         indexes = [
             models.Index(fields=['entity_type', 'entity_id']),
         ]
-class QRAnalytics(models.Model):
-    # This foreign key field automatically creates a 'qr_id' column
+class QRAnalytics(BaseModel):
     qr = models.ForeignKey(
         'QR', 
         on_delete=models.CASCADE, 
@@ -67,7 +64,7 @@ class QRAnalytics(models.Model):
             models.Index(fields=['qr']),
             models.Index(fields=['entity_type', 'entity_id']),
         ]
-class QRScanSummary(models.Model):
+class QRScanSummary(BaseModel):
     qr = models.OneToOneField(
         'QR', 
         on_delete=models.CASCADE, 
@@ -83,6 +80,5 @@ class QRScanSummary(models.Model):
     class Meta:
         verbose_name = "QR Scan Summary"
         verbose_name_plural = "QR Scan Summaries"
-
     def __str__(self):
         return f"Summary for {self.qr.name}"
