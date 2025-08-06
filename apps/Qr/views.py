@@ -7,15 +7,13 @@ class QRViewSet(viewsets.ModelViewSet):
     queryset = QR.objects.all()
     serializer_class = QRSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
-
-class QRAnalyticsViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = QRAnalytics.objects.all().order_by('-scanned_at')
+    
+class QRAnalyticsViewSet(viewsets.ModelViewSet):
+    queryset = QRAnalytics.objects.all()
     serializer_class = QRAnalyticsSerializer
-
+    permission_classes = [IsAuthenticatedOrReadOnly]
+    
 class QRScanSummaryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = QRScanSummary.objects.all()
     serializer_class = QRScanSummarySerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
-    

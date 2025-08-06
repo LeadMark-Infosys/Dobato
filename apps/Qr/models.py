@@ -38,32 +38,21 @@ class QR(BaseModel):
     def __str__(self):
         return f"{self.name} ({self.municipality.name})"
 
-    class Meta:
-        verbose_name = "QR Code"
-        verbose_name_plural = "QR Codes"
-        indexes = [
-            models.Index(fields=['entity_type', 'entity_id']),
-        ]
 class QRAnalytics(BaseModel):
     qr = models.ForeignKey(
         'QR', 
         on_delete=models.CASCADE, 
         related_name='scans_analytics'
     )
-    
     entity_type = models.CharField(max_length=50)
     entity_id = models.UUIDField()
     scanned_at = models.DateTimeField(auto_now_add=True)
     ip_address = models.GenericIPAddressField()
     user_agent = models.TextField()
     approx_location = models.CharField(max_length=255, null=True, blank=True)
+    def __str__(self):
+        return f"{self.qr.name} scanned at {self.scanned_at} from {self.ip_address}"
 
-    class Meta:
-        verbose_name_plural = "QR Analytics"
-        indexes = [
-            models.Index(fields=['qr']),
-            models.Index(fields=['entity_type', 'entity_id']),
-        ]
 class QRScanSummary(BaseModel):
     qr = models.OneToOneField(
         'QR', 
@@ -76,9 +65,5 @@ class QRScanSummary(BaseModel):
     total_scans = models.PositiveIntegerField(default=0)
     unique_ip_count = models.PositiveIntegerField(default=0)
     last_scanned_at = models.DateTimeField(null=True, blank=True)
-
-    class Meta:
-        verbose_name = "QR Scan Summary"
-        verbose_name_plural = "QR Scan Summaries"
     def __str__(self):
-        return f"Summary for {self.qr.name}"
+        return f"Summary for {self.qr.name}: {self.total_scans} scans, last at {self.last_scanned_at}"
