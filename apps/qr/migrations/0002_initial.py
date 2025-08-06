@@ -11,43 +11,54 @@ class Migration(migrations.Migration):
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('tourism', '0001_initial'),
+        ('municipality', '0001_initial'),
+        ('qr', '0001_initial'),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='storysection',
+            model_name='qranalytics',
             name='created_by',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='%(app_label)s_%(class)s_created', to=settings.AUTH_USER_MODEL),
         ),
         migrations.AddField(
-            model_name='storysection',
-            name='place',
-            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='tourism.touristplace'),
+            model_name='qranalytics',
+            name='qr',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='scans_analytics', to='qr.qr'),
         ),
         migrations.AddField(
-            model_name='storysection',
+            model_name='qranalytics',
             name='updated_by',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='%(app_label)s_%(class)s_updated', to=settings.AUTH_USER_MODEL),
         ),
         migrations.AddField(
-            model_name='review',
+            model_name='qr',
             name='created_by',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='%(app_label)s_%(class)s_created', to=settings.AUTH_USER_MODEL),
         ),
         migrations.AddField(
-            model_name='review',
-            name='place',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='tourism.touristplace'),
+            model_name='qr',
+            name='municipality',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='qr_codes', to='municipality.municipality'),
         ),
         migrations.AddField(
-            model_name='review',
+            model_name='qr',
             name='updated_by',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='%(app_label)s_%(class)s_updated', to=settings.AUTH_USER_MODEL),
         ),
         migrations.AddField(
-            model_name='media',
-            name='place',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='media', to='tourism.touristplace'),
+            model_name='qr',
+            name='user',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='created_qrs', to=settings.AUTH_USER_MODEL),
+        ),
+        migrations.AddField(
+            model_name='qrscansummary',
+            name='created_by',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='%(app_label)s_%(class)s_created', to=settings.AUTH_USER_MODEL),
+        ),
+        migrations.AddField(
+            model_name='qrscansummary',
+            name='updated_by',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='%(app_label)s_%(class)s_updated', to=settings.AUTH_USER_MODEL),
         ),
     ]
