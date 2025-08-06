@@ -1,8 +1,20 @@
 from rest_framework import serializers
-from .models import QR
+from .models import QR, QRAnalytics, QRScanSummary
+
+class QRScanSummarySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QRScanSummary
+        fields = '__all__'
 
 class QRSerializer(serializers.ModelSerializer):
+    scan_summary = QRScanSummarySerializer(read_only=True)
+
     class Meta:
         model = QR
         fields = '__all__'
-        read_only_fields = ['uuid', 'total_scans', 'unique_ip_count', 'last_scanned']
+        read_only_fields = ['uuid', 'created_at', 'updated_at']
+
+class QRAnalyticsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QRAnalytics
+        fields = '__all__'
