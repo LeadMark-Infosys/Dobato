@@ -3,15 +3,14 @@ from django.http import HttpResponseNotFound
 from .models import Municipality
 from apps.core.tenant_context import set_current_tenant, clear_current_tenant
 
+
 class TenantContextMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
-        host = request.get_host().split(':')[0]  
-
-        parts = host.split('.')
-
+        host = request.get_host().split(":")[0]
+        parts = host.split(".")
         if len(parts) < 2:
             return HttpResponseNotFound("Invalid domain format")
 

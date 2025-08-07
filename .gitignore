@@ -2,6 +2,7 @@
 .venv/
 venv/
 ENV/
+env/
 
 # Python bytecode
 __pycache__/
@@ -17,3 +18,5 @@ logs/
 
 .env
 media/
+
+migrations/

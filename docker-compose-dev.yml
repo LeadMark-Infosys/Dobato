@@ -5,14 +5,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    command: python manage.py runserver 0.0.0.0:8000
+    command: python manage.py runserver 0.0.0.0:7000
     volumes:
       - .:/usr/src/app
       - static_volume:/usr/src/app/staticfiles
     expose:
-      - 8000
+      - 7000
     ports:
-      - 8090:8000   
+      - 7000:7000
     env_file:
       - ./.env
     depends_on:
@@ -55,7 +55,7 @@ services:
   redis:
     image: redis:7
     ports:
-      - 6380:6379  # Changed host port from 6379 to 6380
+      - 6380:6379 # Changed host port from 6379 to 6380
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
