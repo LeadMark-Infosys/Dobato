@@ -15,7 +15,6 @@ class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
     serializer_class = ReviewSerializer
     permission_classes = [IsDataEntryOrDataManagerAndApproved]
-
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
     def approve(self, request, pk=None):
         review = self.get_object()
@@ -27,6 +26,5 @@ class FavoriteViewSet(viewsets.ModelViewSet):
     queryset = Favorite.objects.all()  
     serializer_class = FavoriteSerializer
     permission_classes = [IsDataEntryOrDataManagerAndApproved]
-
     def get_queryset(self):
         return Favorite.objects.filter(user=self.request.user)

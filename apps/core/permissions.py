@@ -42,3 +42,4 @@ class IsDataEntryOrDataManagerAndApproved(permissions.BasePermission):
             getattr(user, 'user_type', None) in ['data_entry_user', 'datamanager'] and
             user.is_active is True
         )
+    

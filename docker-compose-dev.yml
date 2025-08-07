@@ -9,7 +9,6 @@ services:
     volumes:
       - .:/usr/src/app
       - static_volume:/usr/src/app/staticfiles
-
     expose:
       - 7000
     ports:
@@ -56,7 +55,7 @@ services:
   redis:
     image: redis:7
     ports:
-      - 6379:6379
+      - 6380:6379 # Changed host port from 6379 to 6380
 
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
