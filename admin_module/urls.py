@@ -61,6 +61,7 @@ urlpatterns = [
     path("api/event/", include("apps.event.urls")),
     path("api/feedback/", include("apps.feedback.urls")),
     path("api/qr/", include("apps.qr.urls")),
+    path("api/cms/", include("apps.cms.urls")),
 ]
 
 if settings.DEBUG:
