@@ -6,12 +6,6 @@ class QRSerializer(serializers.ModelSerializer):
         model = QR
         fields = '__all__'
 
-    def create(self, validated_data):
-        print("Validated data in create():", validated_data)
-        municipality = validated_data.pop('municipality', None)
-        print("Municipality popped:", municipality)
-        return super().create(validated_data)
-
 
 class QRAnalyticsSerializer(serializers.ModelSerializer):
     class Meta:
@@ -22,12 +16,3 @@ class QRAnalyticsSerializer(serializers.ModelSerializer):
         if not value:
             raise serializers.ValidationError("IP address is required.")
         return value
-
-    def validate(self, attrs):
-        qr = attrs.get('qr')
-        ip = attrs.get('ip_address')
-
-        if QRAnalytics.objects.filter(qr=qr, ip_address=ip).exists():
-          pass 
-
-        return attrs
