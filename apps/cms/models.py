@@ -24,6 +24,8 @@ class Page(MunicipalityAwareModel, BaseModel):
         ("about", "About"),
     ]
 
+    RESERVED_SLUGS = {"admin", "api", "static", "media", "sitemap", "robots", "assets"}
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255)
@@ -58,13 +60,24 @@ class Page(MunicipalityAwareModel, BaseModel):
         return f"{self.title} ({self.language_code}) - {self.municipality.name}"
 
     def save(self, *args, **kwargs):
+        old_slug = None
+        if self.pk:
+            try:
+                old_slug = Page.objects.get(pk=self.pk).slug
+            except Page.DoesNotExist:
+                pass
+
         if not self.slug:
             self.slug = slugify(self.title)
+        if self.slug in self.RESERVED_SLUGS:
+            raise ValidationError("Slug is reserved.")
         if self.status == "published" and not self.published_at:
             self.published_at = timezone.now()
-
         super().save(*args, **kwargs)
-
+        if old_slug and old_slug != self.slug:
+            PageSlugHistory.objects.create(
+                page=self, old_slug=old_slug, new_slug=self.slug
+            )
         if self.pk:
             self.create_version()
 
@@ -97,6 +110,24 @@ class Page(MunicipalityAwareModel, BaseModel):
             .exists()
         ):
             raise ValidationError("Slug must be unique per municipality and language.")
+
+        if self.slug in self.RESERVED_SLUGS:
+            raise ValidationError("Slug is reserved.")
+
+
+class PageSlugHistory(models.Model):
+    page = models.ForeignKey(
+        "Page", on_delete=models.CASCADE, related_name="slug_history"
+    )
+    old_slug = models.SlugField(max_length=255)
+    new_slug = models.SlugField(max_length=255)
+    changed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["old_slug", "page", "changed_at"])]
+
+    def __str__(self):
+        return f"{self.old_slug} -> {self.new_slug}"
 
 
 class PageMeta(models.Model):
