@@ -88,7 +88,7 @@ class PageVersionSerializer(serializers.ModelSerializer):
             "change_note",
             "created_at",
         ]
-        read_only_fields = ["version_number", "created_at"]
+        read_only_fields = ["version_number", "created_at", "editor", "editor_name"]
 
 
 class PageSerializer(serializers.ModelSerializer):
