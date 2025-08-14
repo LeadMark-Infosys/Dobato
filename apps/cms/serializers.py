@@ -1,5 +1,44 @@
 from rest_framework import serializers
 from .models import PageMeta, PageVersion, PageSection, PageMedia, Page
+import bleach
+
+ALLOWED_TAGS = [
+    "p",
+    "br",
+    "span",
+    "div",
+    "img",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "ul",
+    "ol",
+    "li",
+    "a",
+    "strong",
+    "em",
+    "blockquote",
+    "code",
+    "pre",
+]
+ALLOWED_ATTRIBUTES = {
+    "a": ["href", "title", "rel", "target"],
+    "img": ["src", "alt", "title", "width", "height"],
+}
+
+ALLOWED_PROTOCOLS = ["http", "https", "mailto"]
+
+
+def clean_html(value: str) -> str:
+    return bleach.clean(
+        value or "",
+        tags=ALLOWED_TAGS,
+        attributes=ALLOWED_ATTRIBUTES,
+        protocols=ALLOWED_PROTOCOLS,
+        strip=True,
+    )
 
 
 class PageMetaSerializer(serializers.ModelSerializer):
@@ -20,6 +59,12 @@ class PageSectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = PageSection
         fields = ["id", "title", "content", "type", "position", "is_active"]
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if "content" in attrs:
+            attrs["content"] = clean_html(attrs["content"])
+        return attrs
 
 
 class PageMediaSerializer(serializers.ModelSerializer):
@@ -118,6 +163,9 @@ class PageSerializer(serializers.ModelSerializer):
                 PageMedia.objects.create(page=instance, **media)
 
         return instance
+
+    def validate_body(self, value):
+        return clean_html(value)
 
 
 class PageListSerializer(serializers.ModelSerializer):
