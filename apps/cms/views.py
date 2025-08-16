@@ -36,7 +36,7 @@ class PageViewSet(MunicipalityTenantModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        return queryset.filter(is_deleted=False)
+        return queryset.filter(is_deleted=False, municipality=self.request.tenant)
 
     def perform_create(self, serializer):
         serializer.save(
