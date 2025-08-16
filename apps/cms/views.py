@@ -55,6 +55,19 @@ class PageViewSet(MunicipalityTenantModelViewSet):
         page.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+    def _unique_slug_copy(self, slug, municipality, language_code):
+        candidate = f"{slug}-copy"
+        idx = 2
+        while Page.objects.filter(
+            municipality=municipality,
+            slug=candidate,
+            language_code=language_code,
+            is_deleted=False,
+        ).exists():
+            candidate = f"{slug}-copy-{idx}"
+            idx += 1
+        return candidate
+
     @action(detail=True, methods=["post"], permission_classes=[permissions.IsAdminUser])
     def publish(self, request, pk=None):
         page = self.get_object()
@@ -88,11 +101,14 @@ class PageViewSet(MunicipalityTenantModelViewSet):
     @action(detail=True, methods=["post"])
     def duplicate(self, request, pk=None):
         original_page = self.get_object()
+        new_slug = self._unique_slug_copy(
+            original_page.slug, original_page.municipality, original_page.language_code
+        )
 
         duplicate_page = Page.objects.create(
             municipality=original_page.municipality,
             title=f"{original_page.title} (Copy)",
-            slug=f"{original_page.slug}-copy",
+            slug=new_slug,
             language_code=original_page.language_code,
             body=original_page.body,
             banner_image=original_page.banner_image,
