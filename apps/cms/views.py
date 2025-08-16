@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework import status, permissions, viewsets
 from rest_framework.decorators import action
 from django.utils import timezone
+from django.db import transaction
 
 from .models import PageMeta, PageVersion, PageSection, PageMedia, Page
 from .serializers import (
@@ -148,15 +149,51 @@ class PageViewSet(MunicipalityTenantModelViewSet):
         page = self.get_object()
         try:
             version = page.versions.get(version_number=version_number)
-            page.title = version.title
-            page.body = version.body
-            page.updated_by = request.user
-            page.save()
-            return Response({"detail": f"Rolled back to version {version_number}"})
         except PageVersion.DoesNotExist:
             return Response(
                 {"error": "Version not found"}, status=status.HTTP_404_NOT_FOUND
             )
+        snapshot = version.snapshot or {}
+        with transaction.atomic():
+            page.title = snapshot.get("title", page.title)
+            page.body = snapshot.get("body", page.body)
+            page.updated_by = request.user
+            page.save()
+            meta_data = snapshot.get("meta")
+            if meta_data:
+                from .models import PageMeta
+
+                meta, _ = PageMeta.objects.update_or_create(page=page)
+                for k, v in meta_data.items():
+                    setattr(meta, k, v)
+                meta.save()
+            sections = snapshot.get("sections", [])
+            if sections:
+                page.sections.all().delete()
+                for s in sections:
+                    PageSection.objects.create(
+                        page=page,
+                        title=s["title"],
+                        content=s["content"],
+                        type=s["type"],
+                        position=s["position"],
+                        is_active=s["is_active"],
+                    )
+            media_items = snapshot.get("media", [])
+            if media_items:
+                page.media.all().delete()
+                for m in media_items:
+                    PageMedia.objects.create(
+                        page=page,
+                        media_url=m["media_url"],
+                        caption=m["caption"],
+                        is_featured=m["is_featured"],
+                    )
+        return Response(
+            {
+                "detail": f"Rolled back (content, meta, sections, media) to version {version_number}"
+            }
+        )
 
 
 class PageMetaViewSet(viewsets.ModelViewSet):
