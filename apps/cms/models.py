@@ -1,11 +1,27 @@
 import uuid
 from django.db import models
 from django.conf import settings
-from django.utils.text import slugify
 from django.core.exceptions import ValidationError
+from django.utils.text import slugify
 from django.utils import timezone
 from apps.municipality.models import MunicipalityAwareModel
 from apps.core.models import BaseModel
+from django.forms.models import model_to_dict
+
+
+class PageSlugHistory(models.Model):
+    page = models.ForeignKey(
+        "Page", on_delete=models.CASCADE, related_name="slug_history"
+    )
+    old_slug = models.SlugField(max_length=255)
+    new_slug = models.SlugField(max_length=255)
+    changed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [models.Index(fields=["old_slug", "page", "changed_at"])]
+
+    def __str__(self):
+        return f"{self.old_slug} -> {self.new_slug}"
 
 
 class Page(MunicipalityAwareModel, BaseModel):
@@ -59,6 +75,68 @@ class Page(MunicipalityAwareModel, BaseModel):
     def __str__(self):
         return f"{self.title} ({self.language_code}) - {self.municipality.name}"
 
+    def _build_snapshot(self):
+        meta = None
+        if hasattr(self, "meta"):
+            meta = model_to_dict(
+                self.meta,
+                fields=[
+                    "meta_title",
+                    "meta_description",
+                    "canonical_url",
+                    "og_title",
+                    "og_description",
+                    "og_image",
+                    "robots_directive",
+                ],
+            )
+            sections = [
+                {
+                    "title": s.title,
+                    "content": s.content,
+                    "type": s.type,
+                    "position": s.position,
+                    "is_active": s.is_active,
+                }
+                for s in self.sections.order_by("position")
+            ]
+            media = [
+                {
+                    "media_url": m.media_url,
+                    "caption": m.caption,
+                    "is_featured": m.is_featured,
+                }
+                for m in self.media.all()
+            ]
+            return {
+                "title": self.title,
+                "body": self.body,
+                "slug": self.slug,
+                "meta": meta,
+                "sections": sections,
+                "media": media,
+            }
+
+    def create_version(self):
+        snapshot = self._build_snapshot()
+        last = self.version.order_by("-version_number").first()
+        if last and last.snapshot == snapshot:
+            return
+        version_number = (last.version_number + 1) if last else 1
+        PageVersion.objects.create(
+            page=self,
+            version_number=version_number,
+            title=self.title,
+            body=self.body,
+            editor=self.updated_by,
+            change_note=f"Auto-saved version {version_number}",
+            snapshot=snapshot,
+        )
+
+        old_versions = self.versions.order_by("-version_number")[20:]
+        if old_versions:
+            PageVersion.objects.filter(id__in=[v.id for v in old_versions]).delete()
+
     def save(self, *args, **kwargs):
         old_slug = None
         if self.pk:
@@ -66,7 +144,6 @@ class Page(MunicipalityAwareModel, BaseModel):
                 old_slug = Page.objects.get(pk=self.pk).slug
             except Page.DoesNotExist:
                 pass
-
         if not self.slug:
             self.slug = slugify(self.title)
         if self.slug in self.RESERVED_SLUGS:
@@ -80,23 +157,6 @@ class Page(MunicipalityAwareModel, BaseModel):
             )
         if self.pk:
             self.create_version()
-
-    def create_version(self):
-        last_version = self.versions.order_by("-version_number").first()
-        version_number = last_version.version_number + 1 if last_version else 1
-
-        PageVersion.objects.create(
-            page=self,
-            version_number=version_number,
-            title=self.title,
-            body=self.body,
-            editor=self.updated_by,
-            change_note=f"Auto-saved version {version_number}",
-        )
-
-        old_versions = self.versions.order_by("-version_number")[20:]
-        if old_versions:
-            PageVersion.objects.filter(id__in=[v.id for v in old_versions]).delete()
 
     def clean(self):
         if (
@@ -113,21 +173,6 @@ class Page(MunicipalityAwareModel, BaseModel):
 
         if self.slug in self.RESERVED_SLUGS:
             raise ValidationError("Slug is reserved.")
-
-
-class PageSlugHistory(models.Model):
-    page = models.ForeignKey(
-        "Page", on_delete=models.CASCADE, related_name="slug_history"
-    )
-    old_slug = models.SlugField(max_length=255)
-    new_slug = models.SlugField(max_length=255)
-    changed_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        indexes = [models.Index(fields=["old_slug", "page", "changed_at"])]
-
-    def __str__(self):
-        return f"{self.old_slug} -> {self.new_slug}"
 
 
 class PageMeta(models.Model):
@@ -151,6 +196,7 @@ class PageVersion(models.Model):
     version_number = models.PositiveIntegerField()
     title = models.CharField(max_length=255)
     body = models.TextField(blank=True)
+    snapshot = models.JSONField(default=dict, blank=True)
     editor = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True
     )
