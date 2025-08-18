@@ -6,7 +6,13 @@ class QRSerializer(serializers.ModelSerializer):
         model = QR
         fields = '__all__'
 
+
 class QRAnalyticsSerializer(serializers.ModelSerializer):
     class Meta:
         model = QRAnalytics
-        fields = '__all__'    
+        fields = '__all__'
+
+    def validate_ip_address(self, value):
+        if not value:
+            raise serializers.ValidationError("IP address is required.")
+        return value

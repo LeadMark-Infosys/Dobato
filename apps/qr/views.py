@@ -1,14 +1,16 @@
 from rest_framework import viewsets
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from apps.core.permissions import IsDataEntryOrDataManagerAndApproved
 from .models import QR, QRAnalytics
 from .serializers import QRSerializer, QRAnalyticsSerializer
+from apps.core.views import MunicipalityTenantModelViewSet
 
-class QRViewSet(viewsets.ModelViewSet):
+class QRViewSet(MunicipalityTenantModelViewSet):
     queryset = QR.objects.all()
     serializer_class = QRSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
-    
+    permission_classes = [IsDataEntryOrDataManagerAndApproved]
+
+
 class QRAnalyticsViewSet(viewsets.ModelViewSet):
     queryset = QRAnalytics.objects.all()
     serializer_class = QRAnalyticsSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsDataEntryOrDataManagerAndApproved]
