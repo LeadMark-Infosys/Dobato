@@ -1,5 +1,12 @@
 from rest_framework import serializers
-from .models import PageMeta, PageVersion, PageSection, PageMedia, Page
+from .models import (
+    PageMeta,
+    PageVersion,
+    PageSection,
+    PageMedia,
+    Page,
+    PagePreviewToken,
+)
 import bleach
 
 ALLOWED_TAGS = [
@@ -41,6 +48,10 @@ def clean_html(value: str) -> str:
     )
 
 
+def sanitize_section_content(value):
+    return clean_html(value)
+
+
 class PageMetaSerializer(serializers.ModelSerializer):
     class Meta:
         model = PageMeta
@@ -59,18 +70,17 @@ class PageSectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = PageSection
         fields = ["id", "title", "content", "type", "position", "is_active"]
+        read_only_fields = ["id"]
 
-    def validate(self, attrs):
-        attrs = super().validate(attrs)
-        if "content" in attrs:
-            attrs["content"] = clean_html(attrs["content"])
-        return attrs
+    def validate_content(self, v):
+        return sanitize_section_content(v)
 
 
 class PageMediaSerializer(serializers.ModelSerializer):
     class Meta:
         model = PageMedia
         fields = ["id", "media_url", "caption", "is_featured"]
+        read_only_fields = ["id"]
 
 
 class PageVersionSerializer(serializers.ModelSerializer):
@@ -91,8 +101,14 @@ class PageVersionSerializer(serializers.ModelSerializer):
         read_only_fields = ["version_number", "created_at", "editor", "editor_name"]
 
 
+class PagePreviewTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PagePreviewToken
+        fields = ["id", "token", "expires_at", "created_at"]
+        read_only_fields = ["id", "token", "created_at"]
+
+
 class PageSerializer(serializers.ModelSerializer):
-    meta = PageMetaSerializer(required=False)
     sections = PageSectionSerializer(many=True, required=False)
     media = PageMediaSerializer(many=True, required=False)
     versions = PageVersionSerializer(many=True, read_only=True)
@@ -147,20 +163,49 @@ class PageSerializer(serializers.ModelSerializer):
         instance.save()
 
         if meta_data:
-            meta, created = PageMeta.objects.get_or_create(page=instance)
+            meta, _ = PageMeta.objects.get_or_create(page=instance)
             for attr, value in meta_data.items():
                 setattr(meta, attr, value)
             meta.save()
 
-        if sections_data:
-            instance.sections.all().delete()
-            for section in sections_data:
-                PageSection.objects.create(page=instance, **section)
+        # Non-destructive sections
+        existing_sections = {str(s.id): s for s in instance.sections.all()}
+        seen_section_ids = set()
+        for section in sections_data:
+            sid = str(section.get("id") or "")
+            data = {k: v for k, v in section.items() if k != "id"}
+            if sid and sid in existing_sections:
+                sec = existing_sections[sid]
+                for k, v in data.items():
+                    setattr(sec, k, v)
+                sec.save()
+                seen_section_ids.add(sid)
+            else:
+                new = PageSection.objects.create(page=instance, **data)
+                seen_section_ids.add(str(new.id))
+        # delete removed
+        for sid, obj in existing_sections.items():
+            if sid not in seen_section_ids:
+                obj.delete()
 
-        if media_data:
-            instance.media.all().delete()
-            for media in media_data:
-                PageMedia.objects.create(page=instance, **media)
+        # Non-destructive media
+        existing_media = {str(m.id): m for m in instance.media.all()}
+        seen_media_ids = set()
+        for media in media_data:
+            mid = str(media.get("id") or "")
+            data = {k: v for k, v in media.items() if k != "id"}
+            if mid and mid in existing_media:
+                med = existing_media[mid]
+                for k, v in data.items():
+                    setattr(med, k, v)
+                med.save()
+                seen_media_ids.add(mid)
+            else:
+                newm = PageMedia.objects.create(page=instance, **data)
+                seen_media_ids.add(str(newm.id))
+        for mid, obj in existing_media.items():
+            if mid not in seen_media_ids:
+                obj.delete()
 
         return instance
 

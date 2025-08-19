@@ -19,9 +19,24 @@ class PageSlugHistory(models.Model):
 
     class Meta:
         indexes = [models.Index(fields=["old_slug", "page", "changed_at"])]
+        ordering = ["-changed_at"]
 
     def __str__(self):
         return f"{self.old_slug} -> {self.new_slug}"
+
+
+class PagePreviewToken(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    page = models.ForeignKey(
+        "Page", on_delete=models.CASCADE, related_name="preview_tokens"
+    )
+    token = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    def is_valid(self):
+        return timezone.now() < self.expires_at
 
 
 class Page(MunicipalityAwareModel, BaseModel):
@@ -41,6 +56,9 @@ class Page(MunicipalityAwareModel, BaseModel):
     ]
 
     RESERVED_SLUGS = {"admin", "api", "static", "media", "sitemap", "robots", "assets"}
+
+    scheduled_publish_at = models.DateTimeField(null=True, blank=True)
+    scheduled_unpublish_at = models.DateTimeField(null=True, blank=True)
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
@@ -92,6 +110,7 @@ class Page(MunicipalityAwareModel, BaseModel):
             )
             sections = [
                 {
+                    "id": str(s.id),
                     "title": s.title,
                     "content": s.content,
                     "type": s.type,
@@ -102,6 +121,7 @@ class Page(MunicipalityAwareModel, BaseModel):
             ]
             media = [
                 {
+                    "id": str(m.id),
                     "media_url": m.media_url,
                     "caption": m.caption,
                     "is_featured": m.is_featured,
@@ -112,6 +132,9 @@ class Page(MunicipalityAwareModel, BaseModel):
                 "title": self.title,
                 "body": self.body,
                 "slug": self.slug,
+                "banner_image": self.banner_image,
+                "template": self.template,
+                "status": self.status,
                 "meta": meta,
                 "sections": sections,
                 "media": media,

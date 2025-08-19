@@ -2,11 +2,23 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.response import Response
 from rest_framework import status, permissions, viewsets
+from rest_framework.views import APIView
 from rest_framework.decorators import action
 from django.utils import timezone
 from django.db import transaction
+from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
+import secrets
 
-from .models import PageMeta, PageVersion, PageSection, PageMedia, Page
+from .models import (
+    PageMeta,
+    PageVersion,
+    PageSection,
+    PageMedia,
+    Page,
+    PagePreviewToken,
+    PageSlugHistory,
+)
 from .serializers import (
     PageVersionSerializer,
     PageMetaSerializer,
@@ -14,9 +26,55 @@ from .serializers import (
     PageMediaSerializer,
     PageSerializer,
     PageListSerializer,
+    PagePreviewTokenSerializer,
 )
 from apps.core.views import MunicipalityTenantModelViewSet
 from apps.core.permissions import IsDataEntryOrDataManagerAndApproved
+
+
+class PublicPageView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    @method_decorator(cache_page(60 * 5))
+    def get(self, request, slug, language_code="en"):
+        municipality = getattr(request, "tenant", None)
+        try:
+            page = Page.objects.get(
+                municipality=municipality,
+                slug=slug,
+                language_code=language_code,
+                status="published",
+                is_deleted=False,
+            )
+        except Page.DoesNotExist:
+            # check slug history
+            hist = (
+                PageSlugHistory.objects.filter(old_slug=slug)
+                .order_by("-changed_at")
+                .first()
+            )
+            if hist:
+                return Response(
+                    {"redirect": hist.new_slug},
+                    status=301,
+                )
+            return Response({"detail": "Not found"}, status=404)
+        ser = PageSerializer(page)
+        return Response(ser.data)
+
+
+class PreviewPageView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, token):
+        try:
+            t = PagePreviewToken.objects.select_related("page").get(token=token)
+        except PagePreviewToken.DoesNotExist:
+            return Response({"detail": "Invalid"}, status=404)
+        if not t.is_valid():
+            return Response({"detail": "Expired"}, status=410)
+        ser = PageSerializer(t.page)
+        return Response(ser.data)
 
 
 class PageViewSet(MunicipalityTenantModelViewSet):
@@ -171,8 +229,26 @@ class PageViewSet(MunicipalityTenantModelViewSet):
             )
         snapshot = version.snapshot or {}
         with transaction.atomic():
-            page.title = snapshot.get("title", page.title)
-            page.body = snapshot.get("body", page.body)
+            for field in ["title", "body", "banner_image", "template", "status"]:
+                if field in snapshot:
+                    setattr(page, field, snapshot[field])
+            # slug rollback (optional) - ensure uniqueness
+            if "slug" in snapshot and snapshot["slug"] != page.slug:
+                candidate = snapshot["slug"]
+                i = 2
+                while (
+                    Page.objects.filter(
+                        municipality=page.municipality,
+                        slug=candidate,
+                        language_code=page.language_code,
+                        is_deleted=False,
+                    )
+                    .exclude(id=page.id)
+                    .exists()
+                ):
+                    candidate = f"{snapshot['slug']}-{i}"
+                    i += 1
+                page.slug = candidate
             page.updated_by = request.user
             page.save()
             meta_data = snapshot.get("meta")
@@ -205,11 +281,18 @@ class PageViewSet(MunicipalityTenantModelViewSet):
                         caption=m["caption"],
                         is_featured=m["is_featured"],
                     )
-        return Response(
-            {
-                "detail": f"Rolled back (content, meta, sections, media) to version {version_number}"
-            }
+        return Response({"detail": "Rolled back."})
+
+    @action(detail=True, methods=["post"], permission_classes=[permissions.IsAdminUser])
+    def create_preview_token(self, request, pk=None):
+        page = self.get_object()
+        ttl_minutes = int(request.data.get("ttl_minutes", 30))
+        token = secrets.token_urlsafe(32)
+        expires = timezone.now() + timezone.timedelta(minutes=ttl_minutes)
+        preview = PagePreviewToken.objects.create(
+            page=page, token=token, expires_at=expires, created_by=request.user
         )
+        return Response(PagePreviewTokenSerializer(preview).data, status=201)
 
 
 class PageMetaViewSet(viewsets.ModelViewSet):
