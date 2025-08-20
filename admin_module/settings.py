@@ -303,6 +303,20 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(),
     },
 }
+CMS_MAX_PAGE_VERSIONS = 20
+CMS_VERSION_MIN_INTERVAL_SECONDS = 60
+CMS_VERSION_TRACKED_FIELDS = [
+    "title",
+    "slug",
+    "body",
+    "status",
+    "template",
+    "language_code",
+    "meta_json",
+    "sections_json",
+]
+CMS_RESERVED_SLUGS = {"admin", "login", "logout", "api", "cms", "static", "media"}
+
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"

@@ -6,8 +6,10 @@ from rest_framework.views import APIView
 from rest_framework.decorators import action
 from django.utils import timezone
 from django.db import transaction
+from django.conf import settings
 from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
+
 import secrets
 
 from .models import (
@@ -32,6 +34,26 @@ from apps.core.views import MunicipalityTenantModelViewSet
 from apps.core.permissions import IsDataEntryOrDataManagerAndApproved
 
 
+def generate_unique_slug(base_slug, municipality, language_code):
+    reserved_slugs = getattr(settings, "CMS_RESERVED_SLUGS", set())
+    slug = base_slug
+    counter = 2
+    while True:
+        conflict = (
+            Page.objects.filter(
+                municipality=municipality,
+                slug=slug,
+                language_code=language_code,
+                is_deleted=False,
+            ).exists()
+            or slug in reserved_slugs
+        )
+        if not conflict:
+            return slug
+        slug = f"{base_slug}--{counter}"
+        counter += 1
+
+
 class PublicPageView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -47,7 +69,6 @@ class PublicPageView(APIView):
                 is_deleted=False,
             )
         except Page.DoesNotExist:
-            # check slug history
             hist = (
                 PageSlugHistory.objects.filter(old_slug=slug)
                 .order_by("-changed_at")
@@ -232,7 +253,6 @@ class PageViewSet(MunicipalityTenantModelViewSet):
             for field in ["title", "body", "banner_image", "template", "status"]:
                 if field in snapshot:
                     setattr(page, field, snapshot[field])
-            # slug rollback (optional) - ensure uniqueness
             if "slug" in snapshot and snapshot["slug"] != page.slug:
                 candidate = snapshot["slug"]
                 i = 2
