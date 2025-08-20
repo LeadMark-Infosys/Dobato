@@ -93,7 +93,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "axes.middleware.AxesMiddleware",
     "apps.core.middleware.APILoggingMiddleware",
-    "apps.cms.middleware.SlugHistoryMiddleware",
+    "apps.cms.middleware.SlugHistoryRedirectMiddleware",
 ]
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (

@@ -168,7 +168,7 @@ class Page(MunicipalityAwareModel, BaseModel):
             return data
 
     def _content_changed(self, snapshot):
-        last = self.veriosn.order_by("-version_number").first()
+        last = self.version.order_by("-version_number").first()
         if not last:
             return True
         return last.snapshot != snapshot
