@@ -1,4 +1,5 @@
 from rest_framework import viewsets
+from rest_framework.permissions import AllowAny
 from apps.core.permissions import IsDataEntryOrDataManagerAndApproved
 from .models import (
     EventCategory, EventLocation, Event, EventSchedule,
@@ -14,17 +15,17 @@ from .serializers import (
 class EventCategoryViewSet(viewsets.ModelViewSet):
     queryset = EventCategory.objects.all()
     serializer_class = EventCategorySerializer
-    permission_classes = [IsDataEntryOrDataManagerAndApproved]
+    permission_classes = [AllowAny]
 
 class EventLocationViewSet(viewsets.ModelViewSet):
     queryset = EventLocation.objects.all()
     serializer_class = EventLocationSerializer
-    permission_classes = [IsDataEntryOrDataManagerAndApproved]
+    permission_classes = [AllowAny]
 
 class EventViewSet(MunicipalityTenantModelViewSet):
     queryset = Event.objects.all()
     serializer_class = EventSerializer
-    permission_classes = [IsDataEntryOrDataManagerAndApproved]
+    permission_classes = [AllowAny]  # Adjust permissions as needed
 
 class EventScheduleViewSet(viewsets.ModelViewSet):
     queryset = EventSchedule.objects.all()

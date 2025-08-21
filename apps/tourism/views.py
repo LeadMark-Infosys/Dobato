@@ -1,4 +1,5 @@
 from rest_framework.viewsets import ModelViewSet
+from rest_framework.permissions import AllowAny
 
 from apps.core.views import MunicipalityTenantModelViewSet
 from apps.core.permissions import IsDataEntryOrDataManagerAndApproved
@@ -8,7 +9,7 @@ from .serializers import *
 class TouristPlaceViewSet(MunicipalityTenantModelViewSet):
     queryset = TouristPlace.objects.all()
     serializer_class = TouristPlaceSerializer
-    permission_classes = [IsDataEntryOrDataManagerAndApproved]
+    permission_classes = [AllowAny]
 
 class StorySectionViewSet(ModelViewSet):
     queryset = StorySection.objects.all()

@@ -44,6 +44,7 @@ SECRET_KEY = "_=d=@cuyb@@=5qccq+*jh@#!@-4w55l_fou+)gm_up-i7yf#vm"
 DEBUG = True
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(" ")
+
 LOGIN_URL = "/user-login/"  # Change this to your actual login route
 
 # Application definition
