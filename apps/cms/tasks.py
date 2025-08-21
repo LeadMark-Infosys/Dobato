@@ -3,7 +3,6 @@ from django.utils import timezone
 from django.db import transaction
 from apps.cms.models import Page
 
-
 @shared_task(name="cms.publish_unpublish_scheduled_pages")
 def publish_unpublish_scheduled_pages():
     now = timezone.now()

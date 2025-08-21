@@ -13,11 +13,20 @@ class EventLocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = EventLocation
         fields = '__all__'
-
+        
 class EventSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = '__all__'
+
+    def validate(self, data):
+        municipality = data.get("municipality") or getattr(self.instance, "municipality", None)
+        if municipality and not municipality.is_active:
+            raise serializers.ValidationError(
+                {"municipality": "Cannot add event because the municipality is inactive."}
+            )
+        return data
+
 
 class EventScheduleSerializer(serializers.ModelSerializer):
     class Meta:

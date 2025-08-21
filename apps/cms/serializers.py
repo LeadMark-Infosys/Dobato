@@ -72,10 +72,8 @@ class PageMediaSerializer(serializers.ModelSerializer):
         model = PageMedia
         fields = ["id", "media_url", "caption", "is_featured"]
 
-
 class PageVersionSerializer(serializers.ModelSerializer):
     editor_name = serializers.CharField(source="editor.get_full_name", read_only=True)
-
     class Meta:
         model = PageVersion
         fields = [

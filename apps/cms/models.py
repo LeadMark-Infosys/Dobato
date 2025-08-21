@@ -8,7 +8,6 @@ from apps.municipality.models import MunicipalityAwareModel
 from apps.core.models import BaseModel
 from django.forms.models import model_to_dict
 
-
 class PageSlugHistory(models.Model):
     page = models.ForeignKey(
         "Page", on_delete=models.CASCADE, related_name="slug_history"
@@ -37,11 +36,9 @@ class Page(MunicipalityAwareModel, BaseModel):
         ("landing", "Landing Page"),
         ("article", "Article"),
         ("contact", "Contact"),
-        ("about", "About"),
+    ("about", "About"),
     ]
-
     RESERVED_SLUGS = {"admin", "api", "static", "media", "sitemap", "robots", "assets"}
-
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255)
@@ -186,10 +183,8 @@ class PageMeta(models.Model):
     robots_directive = models.CharField(
         max_length=50, blank=True, default="index, follow"
     )
-
     def __str__(self):
         return f"Meta for {self.page.title} - {self.page.municipality.name}"
-
 
 class PageVersion(models.Model):
     page = models.ForeignKey(Page, on_delete=models.CASCADE, related_name="versions")
@@ -213,7 +208,6 @@ class PageVersion(models.Model):
     def __str__(self):
         return f"{self.page.title} - Version {self.version_number} - {self.page.municipality.name}"
 
-
 class PageSection(models.Model):
     SECTION_TYPES = [
         ("text", "Text"),
@@ -231,7 +225,6 @@ class PageSection(models.Model):
     type = models.CharField(max_length=50, choices=SECTION_TYPES, default="text")
     position = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
-
     class Meta:
         ordering = ["position"]
         indexes = [
@@ -241,12 +234,10 @@ class PageSection(models.Model):
     def __str__(self):
         return f"{self.page.title} - {self.title} - {self.page.municipality.name}"
 
-
 class PageMedia(models.Model):
     media_url = models.TextField()
     page = models.ForeignKey(Page, on_delete=models.CASCADE, related_name="media")
     caption = models.CharField(max_length=255, blank=True)
     is_featured = models.BooleanField(default=False)
-
     def __str__(self):
         return f"Media for {self.page.title} - {self.page.municipality.name}"

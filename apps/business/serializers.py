@@ -6,11 +6,20 @@ from .models import (
     Business, BusinessMedia, Review, Favorite,
     Report
 )
+from rest_framework import serializers
 
-class BusinessSerializer(ModelSerializer):
+class BusinessSerializer(serializers.ModelSerializer):
     class Meta:
         model = Business
         fields = '__all__'
+
+    def validate(self, data):
+        municipality = data.get("municipality") or getattr(self.instance, "municipality", None)
+        if municipality and not municipality.is_active:
+            raise serializers.ValidationError(
+                {"municipality": "Cannot add business because the municipality is inactive."}
+            )
+        return data
 
 class BusinessMediaSerializer(ModelSerializer):
     class Meta:

@@ -38,6 +38,5 @@ class QRAnalytics(BaseModel):
     ip_address = models.GenericIPAddressField()
     latitude = models.FloatField(blank=True, null=True)
     longitude = models.FloatField(blank=True, null=True)
-    
     def __str__(self):
         return f"{self.qr.name} scanned at {self.scanned_at} from {self.ip_address}"

@@ -40,3 +40,4 @@ class MunicipalityTenantModelViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer, **kwargs):
         # Automatically attach municipality from the request
         serializer.save(municipality=self.request.tenant, **kwargs)
+        

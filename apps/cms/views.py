@@ -18,7 +18,6 @@ from .serializers import (
 from apps.core.views import MunicipalityTenantModelViewSet
 from apps.core.permissions import IsDataEntryOrDataManagerAndApproved
 
-
 class PageViewSet(MunicipalityTenantModelViewSet):
     queryset = Page.objects.all()
     serializer_class = PageSerializer
@@ -28,7 +27,6 @@ class PageViewSet(MunicipalityTenantModelViewSet):
     search_fields = ["title", "body"]
     ordering_fields = ["created_at", "updated_at", "published_at"]
     ordering = ["-created_at"]
-
     def get_serializer_class(self):
         if self.action == "list":
             return PageListSerializer
@@ -82,7 +80,6 @@ class PageViewSet(MunicipalityTenantModelViewSet):
         return Response(
             {"detail": "Page is already published."}, status=status.HTTP_400_BAD_REQUEST
         )
-
     @action(detail=True, methods=["post"], permission_classes=[permissions.IsAdminUser])
     def unpublish(self, request, pk=None):
         page = self.get_object()
@@ -211,34 +208,27 @@ class PageViewSet(MunicipalityTenantModelViewSet):
             }
         )
 
-
 class PageMetaViewSet(viewsets.ModelViewSet):
     queryset = PageMeta.objects.all()
     serializer_class = PageMetaSerializer
     permission_classes = [IsDataEntryOrDataManagerAndApproved]
-
     def get_queryset(self):
         return PageMeta.objects.filter(page__municipality=self.request.tenant)
-
 
 class PageVersionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = PageVersion.objects.all()
     serializer_class = PageVersionSerializer
     permission_classes = [IsDataEntryOrDataManagerAndApproved]
-
     def get_queryset(self):
         return PageVersion.objects.filter(page__municipality=self.request.tenant)
-
 
 class PageSectionViewSet(viewsets.ModelViewSet):
     queryset = PageSection.objects.all()
     serializer_class = PageSectionSerializer
     permission_classes = [IsDataEntryOrDataManagerAndApproved]
     ordering = ["position"]
-
     def get_queryset(self):
         return PageSection.objects.filter(page__municipality=self.request.tenant)
-
 
 class PageMediaViewSet(viewsets.ModelViewSet):
     queryset = PageMedia.objects.all()

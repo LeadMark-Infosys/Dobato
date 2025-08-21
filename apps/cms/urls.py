@@ -8,9 +8,7 @@ from .views import (
     PageVersionViewSet,
 )
 
-
 router = SimpleRouter()
-
 router.register(r"pages", PageViewSet)
 router.register(r"page-meta", PageMetaViewSet)
 router.register(r"page-sections", PageSectionViewSet)

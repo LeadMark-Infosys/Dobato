@@ -27,7 +27,7 @@ class MunicipalityAwareModel(models.Model):
         Municipality,
         on_delete=models.CASCADE,
         related_name="%(class)s_related",
-        blank=True,
+        blank=False,
         null=True,
     )
 
