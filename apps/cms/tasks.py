@@ -8,7 +8,7 @@ from .models import Page
 def publish_unpublish_scheduled_pages():
     now = timezone.now()
     with transaction.atomic():
-        to_publish = Page.objects.filter(
+        to_publish = Page.objects.select_for_update().filter(
             status__in=["draft", "pending"],
             scheduled_publish_at__isnull=False,
             scheduled_publish_at__lte=now,
@@ -18,9 +18,15 @@ def publish_unpublish_scheduled_pages():
             p.status = "published"
             if not p.published_at:
                 p.published_at = now
+            p.scheduled_publish_at = None
             p.save()
 
-        to_unpublish = Page.objects.filter(
+            try:
+                p.create_version(change_note="Scheduled publish", user=None, force=True)
+            except Exception:
+                pass
+
+        to_unpublish = Page.objects.select_for_update().filter(
             status="published",
             scheduled_unpublish_at__isnull=False,
             scheduled_unpublish_at__lte=now,
@@ -30,4 +36,11 @@ def publish_unpublish_scheduled_pages():
             p.status = "draft"
             p.unpublished_at = now
             p.scheduled_publish_at = None
+            p.scheduled_unpublish_at = None
             p.save()
+            try:
+                p.create_version(
+                    change_note="Scheduled unpublish", user=None, force=True
+                )
+            except Exception:
+                pass

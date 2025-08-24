@@ -22,5 +22,10 @@ router.register(r"page-versions", PageVersionViewSet)
 urlpatterns = [
     path("", include(router.urls)),
     path("public/pages/<slug:slug>/", PublicPageView.as_view(), name="public-page"),
+    path(
+        "public/pages/<str:language_code>/<slug:slug>/",
+        PublicPageView.as_view(),
+        name="public-page-lang",
+    ),
     path("preview/<str:token>/", PreviewPageView.as_view(), name="preview-page"),
 ]

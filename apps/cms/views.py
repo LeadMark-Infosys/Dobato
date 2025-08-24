@@ -70,7 +70,11 @@ class PublicPageView(APIView):
             )
         except Page.DoesNotExist:
             hist = (
-                PageSlugHistory.objects.filter(old_slug=slug)
+                PageSlugHistory.objects.filter(
+                    old_slug=slug,
+                    page__municipality=municipality,
+                    page__language_code=language_code,
+                )
                 .order_by("-changed_at")
                 .first()
             )
@@ -313,6 +317,19 @@ class PageViewSet(MunicipalityTenantModelViewSet):
             page=page, token=token, expires_at=expires, created_by=request.user
         )
         return Response(PagePreviewTokenSerializer(preview).data, status=201)
+
+    @action(detail=True, methods=["get"])
+    def slug_history(self, request, pk=None):
+        page = self.get_object()
+        data = [
+            {
+                "old_slug": h.old_slug,
+                "new_slug": h.new_slug,
+                "changed_at": h.changed_at,
+            }
+            for h in page.slug_history.all()
+        ]
+        return Response(data)
 
 
 class PageMetaViewSet(viewsets.ModelViewSet):

@@ -6,15 +6,17 @@ from django.utils.text import slugify
 from django.utils import timezone
 from apps.municipality.models import MunicipalityAwareModel
 from apps.core.models import BaseModel
+from django.db.models import Q
 from django.forms.models import model_to_dict
+from urllib.parse import urlparse
 
-CONTENT_SNAPSHOT_FIELDS = [
-    "title",
-    "slug",
-    "body",
-    "banner_image",
-    "template",
-]
+VERSION_TRACKED_FIELDS = getattr(
+    settings,
+    "CMS_VERSION_TRACKED_FIELDS",
+    ["title", "slug", "body", "banner_image", "template", "status", "language_code"],
+)
+
+CONTENT_SNAPSHOT_FIELDS = VERSION_TRACKED_FIELDS
 
 
 class PageSlugHistory(models.Model):
@@ -31,6 +33,11 @@ class PageSlugHistory(models.Model):
             models.Index(fields=["new_slug", "page", "changed_at"]),
         ]
         ordering = ["-changed_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["old_slug", "page"], name="unique_old_slug_page"
+            )
+        ]
 
     def __str__(self):
         return f"{self.old_slug} -> {self.new_slug}"
@@ -94,11 +101,21 @@ class Page(MunicipalityAwareModel, BaseModel):
     )
 
     class Meta:
-        unique_together = (("municipality", "slug", "language_code"),)
         indexes = [
             models.Index(fields=["municipality", "slug", "language_code"]),
             models.Index(fields=["municipality", "status", "published_at"]),
             models.Index(fields=["municipality", "language_code"]),
+            models.Index(fields=["municipality", "scheduled_publish_at"]),
+            models.Index(fields=["municipality", "scheduled_unpublish_at"]),
+            models.Index(fields=["municipality", "is_featured"]),
+        ]
+
+        constraints = [
+            models.UniqueConstraint(
+                fields=["municipality", "slug", "language_code"],
+                condition=Q(is_deleted=False),
+                name="unique_page_slug_active",
+            )
         ]
 
     def __str__(self):
@@ -168,7 +185,7 @@ class Page(MunicipalityAwareModel, BaseModel):
             return data
 
     def _content_changed(self, snapshot):
-        last = self.version.order_by("-version_number").first()
+        last = self.versions.order_by("-version_number").first()
         if not last:
             return True
         return last.snapshot != snapshot
@@ -195,7 +212,7 @@ class Page(MunicipalityAwareModel, BaseModel):
             snapshot=snapshot,
         )
 
-        max_versions = getattr(settings, "CMS_MAX_VERSIONS", 20)
+        max_versions = getattr(settings, "CMS_MAX_PAGE_VERSIONS", 20)
         stale = self.versions.order_by("-created_at")[max_versions:]
         if stale:
             PageVersion.objects.filter(id__in=[v.id for v in stale]).delete()
@@ -216,9 +233,12 @@ class Page(MunicipalityAwareModel, BaseModel):
             self.published_at = timezone.now()
         super().save(*args, **kwargs)
         if old_slug and old_slug != self.slug:
-            PageSlugHistory.objects.create(
-                page=self, old_slug=old_slug, new_slug=self.slug
-            )
+            if not PageSlugHistory.objects.filter(
+                page=self, old_slug=old_slug
+            ).exists():
+                PageSlugHistory.objects.create(
+                    page=self, old_slug=old_slug, new_slug=self.slug
+                )
         try:
             self.create_version(user=user)
         except Exception:
@@ -237,6 +257,21 @@ class PageMeta(models.Model):
         max_length=50, blank=True, default="index, follow"
     )
 
+    def clean(self):
+        enforce_https = getattr(settings, "CMS_ENFORCE_HTTPS_CANONICAL", True)
+        if self.canonical_url:
+            parsed = urlparse(self.canonical_url)
+            if not parsed.scheme or not parsed.netloc:
+                raise ValidationError(
+                    {"canonical_url": "Canonical URL must be absolute ."}
+                )
+            if parsed.scheme not in ("http", "https"):
+                raise ValidationError(
+                    {"canonical_url": "Canonical URL must be HTTP or HTTPS."}
+                )
+            if enforce_https and parsed.scheme != "https":
+                raise ValidationError({"canonical_url": "Canonical URL must be HTTPS."})
+
     def __str__(self):
         return f"Meta for {self.page.title} - {self.page.municipality.name}"
 
@@ -254,14 +289,20 @@ class PageVersion(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = (("page", "version_number"),)
         ordering = ["-version_number"]
         indexes = [
             models.Index(fields=["page", "version_number"]),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["page", "version_number"],
+                condition=Q(is_deleted=False),
+                name="unique_page_version_active",
+            )
+        ]
 
     def __str__(self):
-        return f"{self.page.title} - Version {self.version_number} - {self.page.municipality.name}"
+        return f"{self.page.title} - Version {self.versions_number} - {self.page.municipality.name}"
 
 
 class PageSection(models.Model):
@@ -293,10 +334,33 @@ class PageSection(models.Model):
 
 
 class PageMedia(models.Model):
-    media_url = models.TextField()
+    media_url = models.TextField(blank=True)
+    url = models.URLField(blank=True)
+    file = models.ImageField(upload_to="page_media/", blank=True, null=True)
     page = models.ForeignKey(Page, on_delete=models.CASCADE, related_name="media")
     caption = models.CharField(max_length=255, blank=True)
     is_featured = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["page", "is_featured"]),
+            models.Index(fields=["is_featured"]),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=(Q(file__isnull=False) | ~Q(url="") | ~Q(media_url="")),
+                name="page_media_requires_one_source",
+            )
+        ]
+
+    def clean(self):
+        if not (
+            self.file or self.url.strip() or (self.media_url and self.media_url.strip())
+        ):
+            raise ValidationError("Provide a file or a URL.")
+
+        if self.file and self.file.size > 5 * 1024 * 1024:
+            raise ValidationError("File size should not exceed 5MB.")
 
     def __str__(self):
         return f"Media for {self.page.title} - {self.page.municipality.name}"

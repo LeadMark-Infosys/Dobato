@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Page, PageMeta, PageVersion, PageSection, PageMedia
+from .models import Page, PageMeta, PageVersion, PageSection, PageMedia, PageSlugHistory
 
 
 class PageMetaInline(admin.StackedInline):
@@ -37,14 +37,16 @@ class PageAdmin(admin.ModelAdmin):
 
     fieldsets = (
         (
-            "Basic Information",
+            "Basic",
             {"fields": ("title", "slug", "language_code", "status", "template")},
         ),
         ("Content", {"fields": ("body", "banner_image", "is_featured")}),
-        ("Publishing", {"fields": ("published_at", "unpublished_at")}),
-        ("Relationships", {"fields": ("municipality", "translated_from")}),
+        ("Scheduling", {"fields": ("scheduled_publish_at", "scheduled_unpublish_at")}),
+        ("Publish State", {"fields": ("published_at", "unpublished_at")}),
+        ("Relations", {"fields": ("municipality", "translated_from")}),
+        ("Meta", {"fields": ("created_by", "updated_by")}),
         (
-            "Meta",
+            "System",
             {"fields": ("id", "created_at", "updated_at"), "classes": ("collapse",)},
         ),
     )
@@ -55,7 +57,7 @@ class PageVersionAdmin(admin.ModelAdmin):
     list_display = ["page", "version_number", "editor", "created_at"]
     list_filter = ["created_at", "page__municipality"]
     search_fields = ["page__title", "title", "change_note"]
-    readonly_fields = ["version_number", "created_at"]
+    readonly_fields = ["version_number", "created_at", "snapshot"]
 
 
 @admin.register(PageSection)
@@ -71,3 +73,10 @@ class PageMediaAdmin(admin.ModelAdmin):
     list_display = ["page", "caption", "is_featured"]
     list_filter = ["is_featured", "page__municipality"]
     search_fields = ["page__title", "caption"]
+
+
+@admin.register(PageSlugHistory)
+class PageSlugHistoryAdmin(admin.ModelAdmin):
+    list_display = ["page", "old_slug", "new_slug", "changed_at"]
+    search_fields = ["old_slug", "new_slug", "page__title"]
+    list_filter = ["page__municipality", "page__language_code"]
