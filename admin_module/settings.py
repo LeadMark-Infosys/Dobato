@@ -127,7 +127,7 @@ CACHES = {
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(
-        minutes=int(os.environ.get("JWT_ACCESS_MINUTES", "15"))
+        minutes=int(os.environ.get("JWT_ACCESS_MINUTES", "60"))
     ),
     "REFRESH_TOKEN_LIFETIME": timedelta(
         days=int(os.environ.get("JWT_REFRESH_DAYS", "7"))
