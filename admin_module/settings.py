@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 from celery.schedules import crontab
 import os
-
+from datetime import timedelta
 
 PASSWORD_RESET_TIMEOUT = 60
 
@@ -123,6 +123,18 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
     }
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=int(os.environ.get("JWT_ACCESS_MINUTES", "15"))
+    ),
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        days=int(os.environ.get("JWT_REFRESH_DAYS", "7"))
+    ),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": True,
 }
 
 
@@ -312,8 +324,6 @@ CMS_VERSION_TRACKED_FIELDS = [
     "status",
     "template",
     "language_code",
-    "meta_json",
-    "sections_json",
 ]
 CMS_RESERVED_SLUGS = {"admin", "login", "logout", "api", "cms", "static", "media"}
 

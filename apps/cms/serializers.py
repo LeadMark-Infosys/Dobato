@@ -182,6 +182,7 @@ class PagePreviewTokenSerializer(serializers.ModelSerializer):
 
 
 class PageSerializer(serializers.ModelSerializer):
+    meta = PageMetaSerializer(required=False)
     sections = PageSectionSerializer(many=True, required=False)
     media = PageMediaSerializer(many=True, required=False)
     versions = PageVersionSerializer(many=True, read_only=True)
