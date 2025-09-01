@@ -14,6 +14,7 @@ from pathlib import Path
 from celery.schedules import crontab
 import os
 
+GLOBAL_HOMEPAGE = "http://localhost:7000/"
 
 PASSWORD_RESET_TIMEOUT = 60
 
@@ -44,6 +45,7 @@ SECRET_KEY = "_=d=@cuyb@@=5qccq+*jh@#!@-4w55l_fou+)gm_up-i7yf#vm"
 DEBUG = True
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "").split(" ")
+
 LOGIN_URL = "/user-login/"  # Change this to your actual login route
 
 # Application definition
@@ -85,6 +87,7 @@ INSTALLED_APPS = DJANGO_APPS + EXTERNAL_APPS + LOCAL_APPS
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+     "apps.core.middleware.TenantRedirectMiddleware",  # <--- updated
     "apps.municipality.middleware.TenantContextMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -92,8 +95,9 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "axes.middleware.AxesMiddleware",
-    "apps.core.middleware.APILoggingMiddleware",
-]
+    
+    ]
+            
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
