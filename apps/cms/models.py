@@ -1,12 +1,25 @@
 import uuid
+import logging
+from urllib.parse import urlparse
+
 from django.db import models
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.utils.text import slugify
 from django.utils import timezone
+from django.forms.models import model_to_dict
+
 from apps.municipality.models import MunicipalityAwareModel
 from apps.core.models import BaseModel
-from django.forms.models import model_to_dict
+
+log = logging.getLogger(__name__)
+
+VERSION_TRACKED_FIELDS = getattr(
+    settings,
+    "CMS_VERSION_TRACKED_FIELDS",
+    ["title", "slug", "body", "banner_image", "template", "status", "language_code"],
+)
+CONTENT_SNAPSHOT_FIELDS = VERSION_TRACKED_FIELDS
 
 
 class PageSlugHistory(models.Model):
@@ -18,10 +31,37 @@ class PageSlugHistory(models.Model):
     changed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        indexes = [models.Index(fields=["old_slug", "page", "changed_at"])]
+        indexes = [
+            models.Index(fields=["old_slug", "page"]),
+            models.Index(fields=["new_slug", "page", "changed_at"]),
+        ]
+        ordering = ["-changed_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["old_slug", "page"],
+                name="unique_old_slug_page",
+            )
+        ]
 
     def __str__(self):
         return f"{self.old_slug} -> {self.new_slug}"
+
+
+class PagePreviewToken(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    page = models.ForeignKey(
+        "Page", on_delete=models.CASCADE, related_name="preview_tokens"
+    )
+    token = models.CharField(max_length=64, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    def is_valid(self):
+        return timezone.now() < self.expires_at
+
+    def __str__(self):
+        return f"PreviewToken {self.token} for {self.page_id}"
 
 
 class Page(MunicipalityAwareModel, BaseModel):
@@ -31,7 +71,6 @@ class Page(MunicipalityAwareModel, BaseModel):
         ("published", "Published"),
         ("archived", "Archived"),
     ]
-
     TEMPLATE_CHOICES = [
         ("default", "Default"),
         ("landing", "Landing Page"),
@@ -39,9 +78,13 @@ class Page(MunicipalityAwareModel, BaseModel):
         ("contact", "Contact"),
         ("about", "About"),
     ]
-
     RESERVED_SLUGS = {"admin", "api", "static", "media", "sitemap", "robots", "assets"}
 
+    # Scheduling
+    scheduled_publish_at = models.DateTimeField(null=True, blank=True)
+    scheduled_unpublish_at = models.DateTimeField(null=True, blank=True)
+
+    # Core fields
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=255)
     slug = models.SlugField(max_length=255)
@@ -65,20 +108,42 @@ class Page(MunicipalityAwareModel, BaseModel):
     )
 
     class Meta:
-        unique_together = (("municipality", "slug", "language_code"),)
         indexes = [
             models.Index(fields=["municipality", "slug", "language_code"]),
             models.Index(fields=["municipality", "status", "published_at"]),
             models.Index(fields=["municipality", "language_code"]),
+            models.Index(fields=["municipality", "scheduled_publish_at"]),
+            models.Index(fields=["municipality", "scheduled_unpublish_at"]),
+            models.Index(fields=["municipality", "is_featured"]),
         ]
 
     def __str__(self):
         return f"{self.title} ({self.language_code}) - {self.municipality.name}"
 
+    def _reserved_slugs(self):
+        return getattr(settings, "CMS_RESERVED_SLUGS", self.RESERVED_SLUGS)
+
+    def clean(self):
+        if (
+            Page.objects.filter(
+                municipality=self.municipality,
+                slug=self.slug,
+                language_code=self.language_code,
+                is_deleted=False,
+            )
+            .exclude(pk=self.pk)
+            .exists()
+        ):
+            raise ValidationError(
+                {"slug": "Slug must be unique per municipality and language."}
+            )
+        if self.slug in self._reserved_slugs():
+            raise ValidationError({"slug": "This slug is reserved."})
+
     def _build_snapshot(self):
-        meta = None
+        data = {}
         if hasattr(self, "meta"):
-            meta = model_to_dict(
+            meta_dict = model_to_dict(
                 self.meta,
                 fields=[
                     "meta_title",
@@ -92,6 +157,7 @@ class Page(MunicipalityAwareModel, BaseModel):
             )
             sections = [
                 {
+                    "id": str(s.id),
                     "title": s.title,
                     "content": s.content,
                     "type": s.type,
@@ -100,79 +166,80 @@ class Page(MunicipalityAwareModel, BaseModel):
                 }
                 for s in self.sections.order_by("position")
             ]
-            media = [
+            media_items = [
                 {
+                    "id": str(m.id),
                     "media_url": m.media_url,
+                    "url": m.url,
                     "caption": m.caption,
                     "is_featured": m.is_featured,
                 }
                 for m in self.media.all()
             ]
-            return {
-                "title": self.title,
-                "body": self.body,
-                "slug": self.slug,
-                "meta": meta,
-                "sections": sections,
-                "media": media,
-            }
+            data["meta"] = meta_dict
+            data["sections"] = sections
+            data["media"] = media_items
+        for f in CONTENT_SNAPSHOT_FIELDS:
+            data[f] = getattr(self, f, None)
+        return data
 
-    def create_version(self):
+    def _content_changed(self, snapshot):
+        last = self.versions.order_by("-version_number").first()
+        if not last:
+            return True
+        return last.snapshot != snapshot
+
+    def create_version(self, change_note=None, user=None, force=False):
         snapshot = self._build_snapshot()
-        last = self.version.order_by("-version_number").first()
-        if last and last.snapshot == snapshot:
-            return
-        version_number = (last.version_number + 1) if last else 1
+        last = self.versions.order_by("-version_number").first()
+        if not force:
+            if last and not self._content_changed(snapshot):
+                return
+            min_interval = getattr(settings, "CMS_VERSION_MIN_INTERVAL_SECONDS", 0)
+            if last and min_interval:
+                if (timezone.now() - last.created_at).total_seconds() < min_interval:
+                    return
+        next_number = 1 if not last else last.version_number + 1
         PageVersion.objects.create(
             page=self,
-            version_number=version_number,
+            version_number=next_number,
             title=self.title,
             body=self.body,
-            editor=self.updated_by,
-            change_note=f"Auto-saved version {version_number}",
+            editor=user or getattr(self, "updated_by", None),
+            change_note=change_note or f"Auto version {next_number}",
             snapshot=snapshot,
         )
-
-        old_versions = self.versions.order_by("-version_number")[20:]
-        if old_versions:
-            PageVersion.objects.filter(id__in=[v.id for v in old_versions]).delete()
+        max_versions = getattr(settings, "CMS_MAX_PAGE_VERSIONS", 20)
+        stale = self.versions.order_by("-created_at")[max_versions:]
+        if stale:
+            PageVersion.objects.filter(id__in=[v.id for v in stale]).delete()
 
     def save(self, *args, **kwargs):
+        user = kwargs.pop("user", None)
         old_slug = None
         if self.pk:
             try:
-                old_slug = Page.objects.get(pk=self.pk).slug
+                old_slug = Page.objects.only("slug").get(pk=self.pk).slug
             except Page.DoesNotExist:
                 pass
         if not self.slug:
             self.slug = slugify(self.title)
-        if self.slug in self.RESERVED_SLUGS:
+        if self.slug in self._reserved_slugs():
             raise ValidationError("Slug is reserved.")
         if self.status == "published" and not self.published_at:
             self.published_at = timezone.now()
         super().save(*args, **kwargs)
         if old_slug and old_slug != self.slug:
-            PageSlugHistory.objects.create(
-                page=self, old_slug=old_slug, new_slug=self.slug
-            )
-        if self.pk:
-            self.create_version()
-
-    def clean(self):
-        if (
-            Page.objects.filter(
-                municipality=self.municipality,
-                slug=self.slug,
-                language_code=self.language_code,
-                is_deleted=False,
-            )
-            .exclude(pk=self.pk)
-            .exists()
-        ):
-            raise ValidationError("Slug must be unique per municipality and language.")
-
-        if self.slug in self.RESERVED_SLUGS:
-            raise ValidationError("Slug is reserved.")
+            if not PageSlugHistory.objects.filter(
+                page=self, old_slug=old_slug
+            ).exists():
+                PageSlugHistory.objects.create(
+                    page=self, old_slug=old_slug, new_slug=self.slug
+                )
+        try:
+            self.create_version(user=user)
+        except Exception:
+            log.exception("Failed to create version for page %s", self.pk)
 
 
 class PageMeta(models.Model):
@@ -186,6 +253,21 @@ class PageMeta(models.Model):
     robots_directive = models.CharField(
         max_length=50, blank=True, default="index, follow"
     )
+
+    def clean(self):
+        enforce_https = getattr(settings, "CMS_ENFORCE_HTTPS_CANONICAL", True)
+        if self.canonical_url:
+            parsed = urlparse(self.canonical_url)
+            if not parsed.scheme or not parsed.netloc:
+                raise ValidationError(
+                    {"canonical_url": "Canonical URL must be absolute."}
+                )
+            if parsed.scheme not in ("http", "https"):
+                raise ValidationError(
+                    {"canonical_url": "Canonical URL must be HTTP or HTTPS."}
+                )
+            if enforce_https and parsed.scheme != "https":
+                raise ValidationError({"canonical_url": "Canonical URL must be HTTPS."})
 
     def __str__(self):
         return f"Meta for {self.page.title} - {self.page.municipality.name}"
@@ -204,10 +286,15 @@ class PageVersion(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = (("page", "version_number"),)
         ordering = ["-version_number"]
         indexes = [
             models.Index(fields=["page", "version_number"]),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["page", "version_number"],
+                name="unique_page_version",
+            )
         ]
 
     def __str__(self):
@@ -224,7 +311,6 @@ class PageSection(models.Model):
         ("embed", "Embed"),
         ("contact_form", "Contact Form"),
     ]
-
     page = models.ForeignKey(Page, on_delete=models.CASCADE, related_name="sections")
     title = models.CharField(max_length=255)
     content = models.TextField()
@@ -243,10 +329,28 @@ class PageSection(models.Model):
 
 
 class PageMedia(models.Model):
-    media_url = models.TextField()
+    media_url = models.TextField(blank=True)
+    url = models.URLField(blank=True)
+    file = models.ImageField(upload_to="page_media/", blank=True, null=True)
     page = models.ForeignKey(Page, on_delete=models.CASCADE, related_name="media")
     caption = models.CharField(max_length=255, blank=True)
     is_featured = models.BooleanField(default=False)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["page", "is_featured"]),
+            models.Index(fields=["is_featured"]),
+        ]
+
+    def clean(self):
+        if not (
+            self.file
+            or (self.url and self.url.strip())
+            or (self.media_url and self.media_url.strip())
+        ):
+            raise ValidationError("Provide a file, url or media_url.")
+        if self.file and self.file.size > 5 * 1024 * 1024:
+            raise ValidationError("File size should not exceed 5MB.")
 
     def __str__(self):
         return f"Media for {self.page.title} - {self.page.municipality.name}"

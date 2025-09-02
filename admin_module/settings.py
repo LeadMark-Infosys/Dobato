@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 from celery.schedules import crontab
 import os
-
+from datetime import timedelta
 
 PASSWORD_RESET_TIMEOUT = 60
 
@@ -93,6 +93,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "axes.middleware.AxesMiddleware",
     "apps.core.middleware.APILoggingMiddleware",
+    "apps.cms.middleware.SlugHistoryRedirectMiddleware",
 ]
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -122,6 +123,18 @@ CACHES = {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
     }
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(
+        minutes=int(os.environ.get("JWT_ACCESS_MINUTES", "60"))
+    ),
+    "REFRESH_TOKEN_LIFETIME": timedelta(
+        days=int(os.environ.get("JWT_REFRESH_DAYS", "7"))
+    ),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": True,
 }
 
 
@@ -302,6 +315,18 @@ CELERY_BEAT_SCHEDULE = {
         "schedule": crontab(),
     },
 }
+CMS_MAX_PAGE_VERSIONS = 20
+CMS_VERSION_MIN_INTERVAL_SECONDS = 60
+CMS_VERSION_TRACKED_FIELDS = [
+    "title",
+    "slug",
+    "body",
+    "status",
+    "template",
+    "language_code",
+]
+CMS_RESERVED_SLUGS = {"admin", "login", "logout", "api", "cms", "static", "media"}
+
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.gmail.com"

@@ -1,21 +1,46 @@
 from celery import shared_task
 from django.utils import timezone
 from django.db import transaction
-from apps.cms.models import Page
+from .models import Page
 
 
 @shared_task(name="cms.publish_unpublish_scheduled_pages")
 def publish_unpublish_scheduled_pages():
     now = timezone.now()
     with transaction.atomic():
-        published = Page.objects.filter(
+        to_publish = Page.objects.select_for_update().filter(
             status__in=["draft", "pending"],
-            published_at__isnull=False,
-            published_at__lte=now,
-        ).update(status="published")
-        unpublished = Page.objects.filter(
+            scheduled_publish_at__isnull=False,
+            scheduled_publish_at__lte=now,
+            is_deleted=False,
+        )
+        for p in to_publish:
+            p.status = "published"
+            if not p.published_at:
+                p.published_at = now
+            p.scheduled_publish_at = None
+            p.save()
+
+            try:
+                p.create_version(change_note="Scheduled publish", user=None, force=True)
+            except Exception:
+                pass
+
+        to_unpublish = Page.objects.select_for_update().filter(
             status="published",
-            unpublished_at__isnull=False,
-            unpublished_at__lte=now,
-        ).update(status="draft")
-    return {"published": published, "unpublished": unpublished}
+            scheduled_unpublish_at__isnull=False,
+            scheduled_unpublish_at__lte=now,
+            is_deleted=False,
+        )
+        for p in to_unpublish:
+            p.status = "draft"
+            p.unpublished_at = now
+            p.scheduled_publish_at = None
+            p.scheduled_unpublish_at = None
+            p.save()
+            try:
+                p.create_version(
+                    change_note="Scheduled unpublish", user=None, force=True
+                )
+            except Exception:
+                pass
