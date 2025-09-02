@@ -1,6 +1,7 @@
 from rest_framework.decorators import action
 from rest_framework import viewsets,permissions, status
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from apps.core.permissions import IsDataEntryOrDataManagerAndApproved
 from apps.core.views import MunicipalityTenantModelViewSet
 from .models import Business, Review, Favorite
@@ -9,7 +10,7 @@ from .serializers import BusinessSerializer, ReviewSerializer, FavoriteSerialize
 class BusinessViewSet(MunicipalityTenantModelViewSet):
     queryset = Business.objects.all()
     serializer_class = BusinessSerializer
-    permission_classes = [IsDataEntryOrDataManagerAndApproved]
+    permission_classes = [AllowAny]
 
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()
